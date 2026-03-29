@@ -2,14 +2,13 @@
   --bg-top: #f4ead6;
   --bg-mid: #e7e2cf;
   --panel: rgba(255, 249, 239, 0.88);
+  --panel-dark: rgba(28, 20, 35, 0.76);
   --ink: #241e29;
   --muted: #5f5b6b;
   --line: rgba(73, 49, 64, 0.14);
   --orange: #e97b3c;
   --orange-dark: #ab4d20;
-  --violet: #7f4dff;
   --rose: #d84477;
-  --gold: #f0bc4d;
 }
 
 * {
@@ -54,7 +53,8 @@ body::before {
 
 .topbar,
 .summary-card,
-.menu-card {
+.menu-card,
+.hud-card {
   background: var(--panel);
   border: 1px solid var(--line);
   box-shadow: 0 18px 42px rgba(65, 46, 29, 0.12);
@@ -120,12 +120,12 @@ button:hover {
 }
 
 .game-wrap {
-  display: block;
+  position: relative;
 }
 
 #game {
   width: 100%;
-  height: auto;
+  aspect-ratio: 16 / 9;
   display: block;
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.65);
@@ -133,30 +133,69 @@ button:hover {
   background: linear-gradient(180deg, #efe5c8, #b8a37f);
 }
 
-.menu-overlay {
-  position: fixed;
+.hud-layer {
+  position: absolute;
   inset: 0;
-  display: none;
-  place-items: center;
-  padding: 24px;
-  background: rgba(42, 29, 38, 0.58);
-  z-index: 5;
+  pointer-events: none;
 }
 
+.hud-card {
+  position: absolute;
+  color: #fff8ef;
+  background: var(--panel-dark);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.hud-main {
+  top: 18px;
+  left: 18px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  min-width: 280px;
+}
+
+.hud-side {
+  top: 18px;
+  right: 18px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  text-align: right;
+  min-width: 240px;
+}
+
+.hud-message {
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  padding: 14px 18px;
+  border-radius: 18px;
+}
+
+.hud-title {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.menu-overlay,
 .summary-overlay {
   position: fixed;
   inset: 0;
   display: none;
   place-items: center;
   padding: 24px;
+}
+
+.menu-overlay {
+  background: rgba(42, 29, 38, 0.58);
+  z-index: 5;
+}
+
+.summary-overlay {
   background: rgba(29, 22, 32, 0.62);
   z-index: 6;
 }
 
-.menu-overlay.visible {
-  display: grid;
-}
-
+.menu-overlay.visible,
 .summary-overlay.visible {
   display: grid;
 }
@@ -224,6 +263,7 @@ button:hover {
   font-size: 1rem;
   line-height: 1.4;
 }
+
 @media (max-width: 760px) {
   .topbar {
     flex-direction: column;
@@ -232,5 +272,17 @@ button:hover {
 
   .map-grid {
     grid-template-columns: 1fr;
+  }
+
+  .hud-main,
+  .hud-side,
+  .hud-message {
+    position: static;
+    margin: 12px;
+  }
+
+  .hud-layer {
+    display: grid;
+    align-content: start;
   }
 }

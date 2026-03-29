@@ -12,7 +12,7 @@
       <div>
         <p class="eyebrow">Prototype</p>
         <h1>Phanto Tikkertje</h1>
-        <p class="subtitle">Kies een map, oefen in de tutorial en jaag verstoppers op met de korte paarse Phanto-mist.</p>
+        <p class="subtitle">Nu als 3D-ervaring met three.js: kies een map, oefen in de tutorial en jaag verstoppers op met de korte paarse Phanto-mist.</p>
       </div>
       <div class="topbar-actions">
         <button id="menuButton" type="button">Menu</button>
@@ -22,7 +22,21 @@
     </section>
 
     <section class="game-wrap">
-      <canvas id="game" width="1280" height="720" aria-label="Spelcanvas"></canvas>
+      <canvas id="game" aria-label="3D spelweergave"></canvas>
+      <div class="hud-layer">
+        <section class="hud-card hud-main">
+          <p id="hudTitle" class="hud-title">Tijd: 180</p>
+          <p id="hudMap">Map: Gouden Plaza</p>
+          <p id="hudRole">Bestuurd: Tikker</p>
+        </section>
+        <section class="hud-card hud-side">
+          <p id="hudPlayers">Spelers: 4</p>
+          <p id="hudPuzzles">Puzzels nog te doen: 4</p>
+        </section>
+        <section class="hud-card hud-message">
+          <p id="hudMessage">Kies in het menu een map of start de tutorial.</p>
+        </section>
+      </div>
     </section>
   </main>
 
@@ -63,6 +77,6 @@
     </div>
   </section>
 
-  <script src="game.js"></script>
+  <script type="module" src="game.js"></script>
 </body>
 </html>

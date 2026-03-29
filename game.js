@@ -1,5 +1,6 @@
+import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+
 const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
 const restartButton = document.getElementById("restartButton");
 const roleButton = document.getElementById("roleButton");
 const menuButton = document.getElementById("menuButton");
@@ -13,37 +14,64 @@ const summaryStats = document.getElementById("summaryStats");
 const playAgainButton = document.getElementById("playAgainButton");
 const summaryMenuButton = document.getElementById("summaryMenuButton");
 const mapButtons = [...document.querySelectorAll(".map-card")];
+const hudTitle = document.getElementById("hudTitle");
+const hudMap = document.getElementById("hudMap");
+const hudRole = document.getElementById("hudRole");
+const hudPlayers = document.getElementById("hudPlayers");
+const hudPuzzles = document.getElementById("hudPuzzles");
+const hudMessage = document.getElementById("hudMessage");
 
-const TAU = Math.PI * 2;
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#efe4c7");
+scene.fog = new THREE.Fog("#efe4c7", 65, 180);
+
+const camera = new THREE.PerspectiveCamera(46, 16 / 9, 0.1, 400);
+const clock = new THREE.Clock();
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const groundHit = new THREE.Vector3();
+
 const keys = new Set();
-const mouse = { x: canvas.width * 0.5, y: canvas.height * 0.5 };
+const tmpVec = new THREE.Vector3();
+const tmpVecB = new THREE.Vector3();
+
+const worldRoot = new THREE.Group();
+const gameplayRoot = new THREE.Group();
+scene.add(worldRoot);
+scene.add(gameplayRoot);
 
 const world = {
-  width: 2100,
-  height: 1500,
-  floorGrid: 160,
+  width: 140,
+  depth: 100,
 };
 
 const state = {
-  controlMode: "seeker",
-  timeLimit: 180,
-  timeLeft: 180,
-  lastTime: 0,
-  statusTimer: 0,
-  mistCooldown: 0,
-  running: false,
-  winner: "",
-  message: "Kies in het menu een map of start de tutorial.",
-  seekerShots: [],
-  mistClouds: [],
-  particles: [],
-  puzzlePenalty: 16,
   currentMap: "plaza",
   mode: "menu",
+  controlMode: "seeker",
+  running: false,
+  winner: "",
+  timeLimit: 180,
+  timeLeft: 180,
+  puzzlePenalty: 16,
+  mistCooldown: 0,
+  message: "Kies in het menu een map of start de tutorial.",
+  lastTime: 0,
+  statusTimer: 0,
+  playedRound: false,
+  summaryReady: false,
+  mapName: "Gouden Plaza",
   stats: {
     solvedPuzzles: 0,
     taggedHiders: 0,
-    roleAtStart: "hider",
+    roleAtStart: "Tikker",
   },
   tutorial: {
     stage: 0,
@@ -54,131 +82,108 @@ const state = {
   },
 };
 
-const camera = {
-  x: 0,
-  y: 0,
-};
-
 const seeker = {
-  x: 980,
-  y: 760,
-  radius: 28,
-  speed: 240,
-  facing: 0,
-  maskHue: "#ffb038",
+  mesh: null,
+  speed: 12,
+  radius: 2.2,
+  moveTarget: new THREE.Vector3(),
+  velocity: new THREE.Vector3(),
+  facing: new THREE.Vector3(1, 0, 0),
+  flashTimer: 0,
+  aiCooldown: 0,
 };
 
 const hiders = [];
 const props = [];
 const puzzles = [];
+const shots = [];
+const clouds = [];
+const mountainMeshes = [];
+const decorativeClouds = [];
 
-const propTemplates = {
-  crate: { color: "#9f6c42", accent: "#d8b077", w: 56, h: 56, type: "box" },
-  barrel: { color: "#7e5333", accent: "#c58b52", w: 48, h: 64, type: "round" },
-  bush: { color: "#699342", accent: "#9bd061", w: 64, h: 54, type: "blob" },
-  lamp: { color: "#57506b", accent: "#f2cf67", w: 34, h: 82, type: "lamp" },
-  statue: { color: "#7f7d86", accent: "#c7c9d5", w: 46, h: 88, type: "tall" },
+const propTypes = {
+  crate: { color: "#9f6c42", accent: "#d8b077", radius: 2.4, scale: [3.5, 3.5, 3.5] },
+  barrel: { color: "#7e5333", accent: "#c58b52", radius: 2.2, scale: [2.9, 4.3, 2.9] },
+  bush: { color: "#699342", accent: "#9bd061", radius: 2.7, scale: [4.2, 3.2, 4.2] },
+  lamp: { color: "#57506b", accent: "#f2cf67", radius: 1.9, scale: [1.3, 6.8, 1.3] },
+  statue: { color: "#7f7d86", accent: "#c7c9d5", radius: 2.1, scale: [2.2, 5.8, 2.2] },
 };
 
 const mapConfigs = {
   plaza: {
     name: "Gouden Plaza",
+    sky: "#efe4c7",
+    fog: "#efe4c7",
+    groundA: "#d7bf8d",
+    groundB: "#b2875f",
+    mountain: "#a97a59",
     timeLimit: 180,
     puzzlePenalty: 16,
-    seekerSpawn: { x: 980, y: 760 },
+    seekerSpawn: [0, 0, 0],
     hiderSpawns: [
-      { id: "hider-1", x: 520, y: 1180, color: "#58b6ff" },
-      { id: "hider-2", x: 1610, y: 1160, color: "#ff7aa2" },
-      { id: "hider-3", x: 1650, y: 360, color: "#67d66d" },
+      [-36, 0, 28],
+      [36, 0, 24],
+      [42, 0, -30],
     ],
     props: [
-      [280, 260, "crate"], [430, 240, "statue"], [620, 300, "bush"], [770, 220, "lamp"],
-      [980, 280, "barrel"], [1180, 250, "crate"], [1340, 300, "bush"], [1540, 230, "statue"],
-      [1760, 280, "crate"], [1860, 420, "lamp"], [310, 520, "barrel"], [540, 610, "bush"],
-      [760, 520, "crate"], [980, 580, "statue"], [1180, 500, "lamp"], [1420, 610, "bush"],
-      [1680, 540, "crate"], [1860, 610, "barrel"], [290, 900, "bush"], [470, 1000, "lamp"],
-      [660, 920, "crate"], [820, 1060, "statue"], [1070, 980, "barrel"], [1260, 900, "bush"],
-      [1510, 1010, "crate"], [1710, 950, "statue"], [1870, 1070, "lamp"], [360, 1250, "barrel"],
-      [590, 1280, "crate"], [860, 1240, "bush"], [1080, 1300, "lamp"], [1380, 1240, "barrel"],
-      [1640, 1280, "crate"], [1880, 1220, "bush"],
+      [-50, 0, -34, "crate"], [-40, 0, -32, "statue"], [-27, 0, -30, "bush"], [-14, 0, -35, "lamp"],
+      [0, 0, -34, "barrel"], [15, 0, -34, "crate"], [29, 0, -31, "bush"], [43, 0, -34, "statue"],
+      [56, 0, -27, "crate"], [-52, 0, -6, "barrel"], [-33, 0, -10, "bush"], [-13, 0, -9, "crate"],
+      [0, 0, -11, "statue"], [16, 0, -8, "lamp"], [34, 0, -8, "bush"], [53, 0, -10, "crate"],
+      [-55, 0, 17, "bush"], [-42, 0, 27, "lamp"], [-22, 0, 18, "crate"], [-4, 0, 28, "statue"],
+      [12, 0, 18, "barrel"], [29, 0, 22, "bush"], [47, 0, 28, "crate"], [59, 0, 16, "lamp"],
+      [-48, 0, 42, "barrel"], [-26, 0, 44, "crate"], [-3, 0, 43, "bush"], [19, 0, 44, "lamp"],
+      [40, 0, 42, "barrel"], [57, 0, 42, "crate"],
     ],
     puzzles: [
-      { id: "p1", x: 410, y: 780 },
-      { id: "p2", x: 1040, y: 360 },
-      { id: "p3", x: 1620, y: 800 },
-      { id: "p4", x: 1220, y: 1210 },
+      [-41, 0, 5],
+      [4, 0, -22],
+      [37, 0, 9],
+      [20, 0, 41],
     ],
   },
   garden: {
     name: "Misttuin",
+    sky: "#dfe7c9",
+    fog: "#dfe7c9",
+    groundA: "#b7ca8c",
+    groundB: "#769068",
+    mountain: "#70805d",
     timeLimit: 165,
     puzzlePenalty: 14,
-    seekerSpawn: { x: 1120, y: 720 },
+    seekerSpawn: [6, 0, 0],
     hiderSpawns: [
-      { id: "hider-1", x: 390, y: 1100, color: "#58b6ff" },
-      { id: "hider-2", x: 1780, y: 1180, color: "#ff7aa2" },
-      { id: "hider-3", x: 1710, y: 290, color: "#67d66d" },
+      [-44, 0, 26],
+      [46, 0, 28],
+      [42, 0, -31],
     ],
     props: [
-      [240, 240, "bush"], [350, 320, "bush"], [470, 230, "crate"], [620, 280, "barrel"],
-      [760, 210, "lamp"], [920, 310, "bush"], [1100, 250, "crate"], [1240, 200, "statue"],
-      [1400, 320, "bush"], [1570, 240, "barrel"], [1760, 280, "crate"], [1910, 360, "lamp"],
-      [250, 520, "crate"], [410, 620, "bush"], [590, 520, "lamp"], [760, 610, "barrel"],
-      [950, 520, "bush"], [1120, 620, "crate"], [1310, 550, "bush"], [1490, 640, "statue"],
-      [1680, 540, "bush"], [1870, 620, "crate"], [280, 900, "lamp"], [440, 1010, "bush"],
-      [620, 880, "crate"], [820, 980, "bush"], [1030, 900, "barrel"], [1220, 1000, "lamp"],
-      [1420, 890, "bush"], [1620, 980, "crate"], [1830, 900, "bush"], [330, 1250, "barrel"],
-      [560, 1280, "bush"], [790, 1200, "crate"], [1000, 1300, "lamp"], [1220, 1220, "bush"],
-      [1470, 1300, "barrel"], [1730, 1220, "crate"], [1910, 1280, "bush"],
+      [-54, 0, -34, "bush"], [-44, 0, -28, "bush"], [-33, 0, -35, "crate"], [-20, 0, -33, "barrel"],
+      [-6, 0, -36, "lamp"], [8, 0, -32, "bush"], [22, 0, -35, "crate"], [36, 0, -36, "statue"],
+      [48, 0, -30, "bush"], [58, 0, -35, "barrel"], [-54, 0, -8, "crate"], [-40, 0, -9, "bush"],
+      [-26, 0, -7, "lamp"], [-10, 0, -8, "barrel"], [4, 0, -8, "bush"], [18, 0, -6, "crate"],
+      [32, 0, -6, "bush"], [47, 0, -4, "statue"], [58, 0, -7, "bush"], [-52, 0, 18, "lamp"],
+      [-38, 0, 24, "bush"], [-22, 0, 18, "crate"], [-4, 0, 22, "bush"], [13, 0, 16, "barrel"],
+      [27, 0, 23, "lamp"], [42, 0, 18, "bush"], [57, 0, 22, "crate"], [-48, 0, 42, "barrel"],
+      [-28, 0, 43, "bush"], [-8, 0, 42, "crate"], [11, 0, 44, "lamp"], [32, 0, 41, "bush"],
+      [49, 0, 43, "barrel"], [60, 0, 41, "crate"],
     ],
     puzzles: [
-      { id: "p1", x: 520, y: 760 },
-      { id: "p2", x: 930, y: 370 },
-      { id: "p3", x: 1520, y: 760 },
-      { id: "p4", x: 960, y: 1180 },
-      { id: "p5", x: 1710, y: 470 },
+      [-35, 0, 2],
+      [-4, 0, -23],
+      [30, 0, 3],
+      [0, 0, 39],
+      [45, 0, -18],
     ],
   },
 };
-
-function rand(min, max) {
-  return min + Math.random() * (max - min);
-}
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function distance(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
-function angleTo(a, b) {
-  return Math.atan2(b.y - a.y, b.x - a.x);
-}
-
-function createProps(layout) {
-  return layout.map(([x, y, kind], index) => ({ id: `prop-${index}`, x, y, kind }));
-}
-
-function createPuzzles(layout) {
-  return layout.map((puzzle) => ({ ...puzzle, progress: 0, solved: false }));
-}
-
-function createHider(id, x, y, color) {
-  return {
-    id,
-    x,
-    y,
-    radius: 22,
-    speed: 190,
-    color,
-    disguisedAs: null,
-    out: false,
-    aiTimer: rand(0.5, 2.5),
-    targetPuzzleId: null,
-    control: id === "hider-1" ? "player" : "ai",
-  };
+function rand(min, max) {
+  return min + Math.random() * (max - min);
 }
 
 function showMenu() {
@@ -218,10 +223,10 @@ function tutorialMessage() {
     return "Tutorial stap 2: klik op een voorwerp dicht bij je om erin te veranderen.";
   }
   if (state.tutorial.stage === 2) {
-    return "Tutorial stap 3: ga naar een puzzel en houd E ingedrukt om hem op te lossen.";
+    return "Tutorial stap 3: ga naast een puzzel staan en houd E ingedrukt om hem op te lossen.";
   }
   if (state.tutorial.stage === 3) {
-    return "Tutorial stap 4: druk op Tab om tikker te worden en gooi daarna mist met Shift.";
+    return "Tutorial stap 4: druk op Tab om tikker te worden en gooi dan mist met Shift.";
   }
   return "Tutorial klaar. Je kent nu de basis van Phanto Tikkertje.";
 }
@@ -238,823 +243,1030 @@ function updateRoleButton() {
   roleButton.textContent = state.controlMode === "seeker" ? "Bestuur: Tikker" : "Bestuur: Verstopper";
 }
 
-function updateStatusPanel() {
-  state.stats.solvedPuzzles = puzzles.filter((puzzle) => puzzle.solved).length;
-}
-
 function assignRandomControlRole() {
   state.controlMode = Math.random() < 0.5 ? "seeker" : "hider";
   updateRoleButton();
-  return state.controlMode;
-}
-
-function setupRound(config, mode) {
-  state.mode = mode;
-  state.timeLimit = config.timeLimit;
-  state.timeLeft = config.timeLimit;
-  state.puzzlePenalty = config.puzzlePenalty;
-  state.statusTimer = 0;
-  state.mistCooldown = 0;
-  state.running = true;
-  state.winner = "";
-  state.stats = {
-    solvedPuzzles: 0,
-    taggedHiders: 0,
-    roleAtStart: "hider",
-  };
-  resetTutorialProgress();
-  state.seekerShots = [];
-  state.mistClouds = [];
-  state.particles = [];
-
-  seeker.x = config.seekerSpawn.x;
-  seeker.y = config.seekerSpawn.y;
-  seeker.facing = 0;
-
-  props.splice(0, props.length, ...createProps(config.props));
-  puzzles.splice(0, puzzles.length, ...createPuzzles(config.puzzles));
-  hiders.splice(0, hiders.length, ...config.hiderSpawns.map((hider) => createHider(hider.id, hider.x, hider.y, hider.color)));
-
-  const drawnRole = mode === "tutorial" ? "hider" : assignRandomControlRole();
-  if (mode === "tutorial") {
-    state.controlMode = "hider";
-    updateRoleButton();
-  }
-  state.stats.roleAtStart = drawnRole;
-
-  state.message = mode === "tutorial"
-    ? tutorialMessage()
-    : drawnRole === "seeker"
-      ? `Map geladen: ${config.name}. De loting zegt dat jij de tikker bent. Druk op Shift voor mist.`
-      : `Map geladen: ${config.name}. De loting zegt dat jij een verstopper bent. Zoek props en puzzels.`;
-
-  updateStatusPanel();
-  hideMenu();
-  hideSummary();
-}
-
-function startMap(mapId) {
-  state.currentMap = mapId;
-  setupRound(mapConfigs[mapId], "match");
-}
-
-function startTutorial() {
-  const tutorialConfig = {
-    name: "Tutorial",
-    timeLimit: 999,
-    puzzlePenalty: 0,
-    seekerSpawn: { x: 760, y: 820 },
-    hiderSpawns: [
-      { id: "hider-1", x: 1120, y: 860, color: "#58b6ff" },
-    ],
-    props: [
-      [620, 540, "crate"], [810, 560, "barrel"], [980, 520, "bush"], [1180, 540, "lamp"],
-      [1380, 540, "statue"], [620, 980, "bush"], [820, 1020, "crate"], [1020, 980, "barrel"],
-      [1240, 1000, "bush"], [1450, 980, "lamp"],
-    ],
-    puzzles: [
-      { id: "tp1", x: 720, y: 760 },
-      { id: "tp2", x: 1260, y: 760 },
-    ],
-  };
-  setupRound(tutorialConfig, "tutorial");
-}
-
-function resetRound() {
-  if (state.mode === "tutorial") {
-    startTutorial();
-  } else {
-    startMap(state.currentMap);
-  }
-}
-
-function worldToScreen(x, y) {
-  return { x: x - camera.x, y: y - camera.y };
-}
-
-function screenToWorld(x, y) {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  return {
-    x: (x - rect.left) * scaleX + camera.x,
-    y: (y - rect.top) * scaleY + camera.y,
-  };
-}
-
-function moveEntity(entity, dx, dy, dt) {
-  if (dx === 0 && dy === 0) {
-    return;
-  }
-  const length = Math.hypot(dx, dy) || 1;
-  const step = entity.speed * dt;
-  entity.x = clamp(entity.x + (dx / length) * step, 80, world.width - 80);
-  entity.y = clamp(entity.y + (dy / length) * step, 80, world.height - 80);
-  if (state.mode === "tutorial" && entity.control === "player" && state.tutorial.stage === 0) {
-    state.tutorial.walked += step;
-    if (state.tutorial.walked >= 180) {
-      advanceTutorialStage(1);
-    }
-  }
-}
-
-function getMovementInput() {
-  const up = keys.has("KeyW") || keys.has("ArrowUp");
-  const down = keys.has("KeyS") || keys.has("ArrowDown");
-  const left = keys.has("KeyA") || keys.has("ArrowLeft");
-  const right = keys.has("KeyD") || keys.has("ArrowRight");
-  return {
-    dx: (right ? 1 : 0) - (left ? 1 : 0),
-    dy: (down ? 1 : 0) - (up ? 1 : 0),
-  };
+  state.stats.roleAtStart = state.controlMode === "seeker" ? "Tikker" : "Verstopper";
 }
 
 function getPlayerHider() {
-  return hiders.find((hider) => hider.control === "player");
+  return hiders.find((hider) => hider.control === "player") || null;
 }
 
-function getNearestProp(entity, maxDistance = 90) {
-  let closest = null;
-  let best = maxDistance;
-  for (const prop of props) {
-    const d = distance(entity, prop);
-    if (d < best) {
-      best = d;
-      closest = prop;
-    }
+function activeHiders() {
+  return hiders.filter((hider) => !hider.out);
+}
+
+function updateHud() {
+  hudTitle.textContent = state.running ? `Tijd: ${Math.max(0, Math.ceil(state.timeLeft))}` : "Tijd: --";
+  hudMap.textContent = `Map: ${state.mapName}`;
+  hudRole.textContent = `Bestuurd: ${state.controlMode === "seeker" ? "Tikker" : "Verstopper"}`;
+  hudPlayers.textContent = `Spelers: ${1 + hiders.length}`;
+  hudPuzzles.textContent = `Puzzels nog te doen: ${puzzles.filter((puzzle) => !puzzle.solved).length}`;
+  hudMessage.textContent = state.mode === "tutorial" ? tutorialMessage() : state.message;
+}
+
+function clearGameplay() {
+  gameplayRoot.clear();
+  props.length = 0;
+  puzzles.length = 0;
+  hiders.length = 0;
+  shots.length = 0;
+  clouds.length = 0;
+}
+
+function createCharacter(color, isSeeker = false) {
+  const group = new THREE.Group();
+  group.castShadow = true;
+
+  const body = new THREE.Mesh(
+    new THREE.CapsuleGeometry(1.05, 1.8, 6, 12),
+    new THREE.MeshStandardMaterial({ color, roughness: 0.72 })
+  );
+  body.position.y = 2.8;
+  body.castShadow = true;
+  group.add(body);
+
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.95, 18, 18),
+    new THREE.MeshStandardMaterial({ color: isSeeker ? "#f0a33a" : "#f5dfc4", roughness: 0.52 })
+  );
+  head.position.y = 4.8;
+  head.castShadow = true;
+  group.add(head);
+
+  const eyeMaterial = new THREE.MeshStandardMaterial({
+    color: isSeeker ? "#d30d18" : "#2a2730",
+    emissive: isSeeker ? "#8a0a12" : "#000000",
+    emissiveIntensity: isSeeker ? 1.2 : 0,
+  });
+  const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), eyeMaterial);
+  const rightEye = leftEye.clone();
+  leftEye.position.set(-0.34, 4.95, 0.74);
+  rightEye.position.set(0.34, 4.95, 0.74);
+  group.add(leftEye, rightEye);
+
+  const smile = new THREE.Mesh(
+    new THREE.TorusGeometry(0.42, 0.08, 10, 18, Math.PI),
+    new THREE.MeshStandardMaterial({
+      color: isSeeker ? "#5a0010" : "#4d3a2e",
+      emissive: isSeeker ? "#220006" : "#000000",
+      emissiveIntensity: isSeeker ? 0.4 : 0,
+    })
+  );
+  smile.position.set(0, 4.4, 0.82);
+  smile.rotation.z = Math.PI;
+  group.add(smile);
+
+  const shadow = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.1, 1.5, 0.16, 24),
+    new THREE.MeshStandardMaterial({ color: "#403224", transparent: true, opacity: 0.28 })
+  );
+  shadow.position.y = 0.08;
+  shadow.receiveShadow = true;
+  group.add(shadow);
+
+  group.userData = { body, head, leftEye, rightEye, smile, shadow };
+  return group;
+}
+
+function createPropMesh(kind) {
+  const config = propTypes[kind];
+  const group = new THREE.Group();
+  let mainMesh;
+
+  if (kind === "crate") {
+    mainMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(config.scale[0], config.scale[1], config.scale[2]),
+      new THREE.MeshStandardMaterial({ color: config.color, roughness: 0.85 })
+    );
+    const trim = new THREE.Mesh(
+      new THREE.BoxGeometry(config.scale[0] + 0.12, 0.35, config.scale[2] + 0.12),
+      new THREE.MeshStandardMaterial({ color: config.accent, roughness: 0.8 })
+    );
+    trim.position.y = 0.3;
+    group.add(trim);
+  } else if (kind === "barrel") {
+    mainMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(config.scale[0] * 0.5, config.scale[2] * 0.5, config.scale[1], 18),
+      new THREE.MeshStandardMaterial({ color: config.color, roughness: 0.74 })
+    );
+    const band = new THREE.Mesh(
+      new THREE.TorusGeometry(config.scale[0] * 0.52, 0.12, 8, 18),
+      new THREE.MeshStandardMaterial({ color: config.accent, metalness: 0.2, roughness: 0.5 })
+    );
+    band.rotation.x = Math.PI / 2;
+    band.position.y = 0.4;
+    const band2 = band.clone();
+    band2.position.y = -0.6;
+    group.add(band, band2);
+  } else if (kind === "bush") {
+    mainMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(config.scale[0] * 0.45, 18, 18),
+      new THREE.MeshStandardMaterial({ color: config.color, roughness: 1 })
+    );
+    mainMesh.scale.set(1.2, 0.9, 1.15);
+    const puff = mainMesh.clone();
+    puff.scale.set(0.95, 0.75, 0.95);
+    puff.position.set(1.2, 0.5, 0.6);
+    const puff2 = mainMesh.clone();
+    puff2.scale.set(0.9, 0.72, 0.88);
+    puff2.position.set(-1.15, 0.3, 0.35);
+    group.add(puff, puff2);
+  } else if (kind === "lamp") {
+    const pole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.2, 0.3, config.scale[1], 14),
+      new THREE.MeshStandardMaterial({ color: config.color, metalness: 0.25, roughness: 0.58 })
+    );
+    pole.position.y = config.scale[1] * 0.5;
+    const lantern = new THREE.Mesh(
+      new THREE.BoxGeometry(1.1, 1.4, 1.1),
+      new THREE.MeshStandardMaterial({ color: config.accent, emissive: config.accent, emissiveIntensity: 0.6 })
+    );
+    lantern.position.y = config.scale[1] + 0.25;
+    group.add(pole, lantern);
+    mainMesh = pole;
+  } else {
+    mainMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(config.scale[0] * 0.6, config.scale[0] * 0.7, config.scale[1], 12),
+      new THREE.MeshStandardMaterial({ color: config.color, roughness: 0.82 })
+    );
+    const orb = new THREE.Mesh(
+      new THREE.SphereGeometry(0.65, 14, 14),
+      new THREE.MeshStandardMaterial({ color: config.accent, roughness: 0.6 })
+    );
+    orb.position.y = config.scale[1] * 0.5;
+    group.add(orb);
   }
-  return closest;
+
+  mainMesh.castShadow = true;
+  mainMesh.receiveShadow = true;
+  mainMesh.position.y = kind === "lamp" ? 0 : config.scale[1] * 0.5;
+  group.add(mainMesh);
+  group.userData.kind = kind;
+  return group;
 }
 
-function getNearestPuzzle(entity, maxDistance = 84) {
-  let closest = null;
-  let best = maxDistance;
-  for (const puzzle of puzzles) {
-    if (puzzle.solved) {
-      continue;
-    }
-    const d = distance(entity, puzzle);
-    if (d < best) {
-      best = d;
-      closest = puzzle;
-    }
+function createPuzzle(position, index) {
+  const group = new THREE.Group();
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.8, 2.4, 1.2, 20),
+    new THREE.MeshStandardMaterial({ color: "#6e5f79", roughness: 0.6 })
+  );
+  base.position.y = 0.6;
+  base.receiveShadow = true;
+  base.castShadow = true;
+
+  const core = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.95),
+    new THREE.MeshStandardMaterial({ color: "#f0d86f", emissive: "#e6bf4a", emissiveIntensity: 1.2, roughness: 0.2 })
+  );
+  core.position.y = 2.15;
+  core.castShadow = true;
+
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(1.35, 0.12, 12, 24),
+    new THREE.MeshStandardMaterial({ color: "#f6ebbb", emissive: "#fff0b4", emissiveIntensity: 1.1 })
+  );
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = 1.35;
+
+  group.add(base, core, ring);
+  group.position.copy(position);
+  group.userData.core = core;
+  group.userData.ring = ring;
+
+  return {
+    id: `puzzle-${index}`,
+    mesh: group,
+    progress: 0,
+    solved: false,
+    pulse: rand(0, Math.PI * 2),
+  };
+}
+
+function createShot(origin, direction) {
+  const group = new THREE.Group();
+  const orb = new THREE.Mesh(
+    new THREE.SphereGeometry(0.85, 14, 14),
+    new THREE.MeshStandardMaterial({ color: "#8f49cc", emissive: "#8f49cc", emissiveIntensity: 1.3, transparent: true, opacity: 0.9 })
+  );
+  const smile = new THREE.Mesh(
+    new THREE.TorusGeometry(0.36, 0.06, 8, 18, Math.PI),
+    new THREE.MeshStandardMaterial({ color: "#d9b7ff", emissive: "#d9b7ff", emissiveIntensity: 1.6 })
+  );
+  smile.rotation.z = Math.PI;
+  smile.position.set(0, -0.08, 0.68);
+  group.add(orb, smile);
+  group.position.copy(origin);
+  group.userData.orb = orb;
+  gameplayRoot.add(group);
+
+  return {
+    mesh: group,
+    direction: direction.clone().normalize(),
+    speed: 16,
+    life: 1.05,
+    maxDistance: 12,
+    travelled: 0,
+  };
+}
+
+function createCloud(position) {
+  const group = new THREE.Group();
+  const puff = new THREE.Mesh(
+    new THREE.SphereGeometry(1.55, 16, 16),
+    new THREE.MeshStandardMaterial({ color: "#8d53cf", emissive: "#6e33b6", emissiveIntensity: 1.4, transparent: true, opacity: 0.35 })
+  );
+  puff.scale.set(1.5, 0.95, 1.2);
+
+  const puff2 = puff.clone();
+  puff2.scale.set(1.1, 0.75, 1.0);
+  puff2.position.set(1.2, 0.5, 0.2);
+
+  const puff3 = puff.clone();
+  puff3.scale.set(1.0, 0.65, 0.9);
+  puff3.position.set(-1.1, 0.2, 0.35);
+
+  const smile = new THREE.Mesh(
+    new THREE.TorusGeometry(0.75, 0.08, 10, 18, Math.PI),
+    new THREE.MeshStandardMaterial({ color: "#d8c5ff", emissive: "#d8c5ff", emissiveIntensity: 1.6 })
+  );
+  smile.rotation.z = Math.PI;
+  smile.position.set(0, 0.1, 1.05);
+
+  group.add(puff, puff2, puff3, smile);
+  group.position.copy(position);
+  gameplayRoot.add(group);
+
+  return {
+    mesh: group,
+    life: 1.2,
+    radius: 3.2,
+    hitSet: new Set(),
+  };
+}
+
+function createHider(index, position, color, control) {
+  const mesh = createCharacter(color, false);
+  mesh.position.copy(position);
+  gameplayRoot.add(mesh);
+
+  return {
+    id: `hider-${index + 1}`,
+    mesh,
+    speed: 9.4,
+    radius: 1.9,
+    control,
+    out: false,
+    disguisedAs: null,
+    disguiseMesh: null,
+    facing: new THREE.Vector3(1, 0, 0),
+    moveTarget: position.clone(),
+    aiTimer: rand(1.2, 3.2),
+    targetPuzzleId: null,
+    solving: 0,
+    moveMemory: new THREE.Vector3(1, 0, 0),
+  };
+}
+
+function setCharacterVisible(actor, visible) {
+  const parts = actor.mesh.userData;
+  parts.body.visible = visible;
+  parts.head.visible = visible;
+  parts.leftEye.visible = visible;
+  parts.rightEye.visible = visible;
+  parts.smile.visible = visible;
+  parts.shadow.visible = visible;
+}
+
+function clearDisguise(hider) {
+  if (hider.disguiseMesh) {
+    hider.mesh.remove(hider.disguiseMesh);
+    hider.disguiseMesh = null;
   }
-  return closest;
+  hider.disguisedAs = null;
+  setCharacterVisible(hider, true);
 }
 
-function launchMist() {
-  if (!state.running || state.mistCooldown > 0) {
+function applyDisguise(hider, kind) {
+  clearDisguise(hider);
+  const disguise = createPropMesh(kind);
+  disguise.scale.multiplyScalar(0.58);
+  disguise.position.set(0, 0, 0);
+  hider.mesh.add(disguise);
+  hider.disguiseMesh = disguise;
+  hider.disguisedAs = kind;
+  setCharacterVisible(hider, false);
+}
+
+function createWorldDecor(config) {
+  scene.background = new THREE.Color(config.sky);
+  scene.fog = new THREE.Fog(config.fog, 65, 180);
+
+  worldRoot.clear();
+  mountainMeshes.length = 0;
+  decorativeClouds.length = 0;
+
+  const ambient = new THREE.HemisphereLight("#fff5d9", "#8f7757", 1.25);
+  const sun = new THREE.DirectionalLight("#fff3c4", 1.8);
+  sun.position.set(26, 48, 20);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -90;
+  sun.shadow.camera.right = 90;
+  sun.shadow.camera.top = 90;
+  sun.shadow.camera.bottom = -90;
+  sun.shadow.camera.near = 5;
+  sun.shadow.camera.far = 180;
+  worldRoot.add(ambient, sun);
+
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(world.width, world.depth, 18, 18),
+    new THREE.MeshStandardMaterial({ color: config.groundA, roughness: 0.98, metalness: 0 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  worldRoot.add(ground);
+
+  const plazaBand = new THREE.Mesh(
+    new THREE.PlaneGeometry(world.width * 0.7, world.depth * 0.45),
+    new THREE.MeshStandardMaterial({ color: config.groundB, roughness: 0.82, transparent: true, opacity: 0.88 })
+  );
+  plazaBand.rotation.x = -Math.PI / 2;
+  plazaBand.position.y = 0.02;
+  worldRoot.add(plazaBand);
+
+  for (let index = 0; index < 16; index += 1) {
+    const angle = (index / 16) * Math.PI * 2;
+    const distance = 74 + (index % 2 === 0 ? 5 : 12);
+    const mountain = new THREE.Mesh(
+      new THREE.ConeGeometry(rand(10, 18), rand(16, 28), 6),
+      new THREE.MeshStandardMaterial({ color: config.mountain, roughness: 1 })
+    );
+    mountain.position.set(Math.cos(angle) * distance, 8, Math.sin(angle) * distance);
+    mountain.castShadow = true;
+    worldRoot.add(mountain);
+    mountainMeshes.push(mountain);
+  }
+
+  for (let index = 0; index < 8; index += 1) {
+    const cloud = new THREE.Mesh(
+      new THREE.SphereGeometry(rand(2.8, 4.4), 16, 16),
+      new THREE.MeshBasicMaterial({ color: "#fff7ef", transparent: true, opacity: 0.55 })
+    );
+    cloud.scale.set(1.8, 0.75, 1.05);
+    cloud.position.set(rand(-58, 58), rand(18, 28), rand(-44, 44));
+    worldRoot.add(cloud);
+    decorativeClouds.push(cloud);
+  }
+}
+
+function setupRound(config, mode) {
+  clearGameplay();
+  hideSummary();
+  state.currentMap = Object.keys(mapConfigs).find((key) => mapConfigs[key] === config) || state.currentMap;
+  state.mapName = config.name;
+  state.mode = mode;
+  state.running = true;
+  state.winner = "";
+  state.timeLimit = config.timeLimit;
+  state.timeLeft = config.timeLimit;
+  state.puzzlePenalty = config.puzzlePenalty;
+  state.mistCooldown = 0;
+  state.statusTimer = 0;
+  state.summaryReady = false;
+  state.playedRound = true;
+  state.stats = {
+    solvedPuzzles: 0,
+    taggedHiders: 0,
+    roleAtStart: "Tikker",
+  };
+
+  resetTutorialProgress();
+  state.message = mode === "tutorial" ? tutorialMessage() : "De ronde is gestart. Los puzzels op of jaag de verstoppers op.";
+  createWorldDecor(config);
+
+  seeker.mesh = createCharacter("#7c4a1f", true);
+  seeker.mesh.position.set(...config.seekerSpawn);
+  seeker.mesh.position.y = 0;
+  seeker.facing.set(-1, 0, 0);
+  seeker.moveTarget.copy(seeker.mesh.position);
+  seeker.aiCooldown = rand(0.5, 1.2);
+  gameplayRoot.add(seeker.mesh);
+
+  const spawnCount = mode === "tutorial" ? 1 : config.hiderSpawns.length;
+  for (let index = 0; index < spawnCount; index += 1) {
+    const spawn = new THREE.Vector3(...config.hiderSpawns[index]);
+    const color = ["#58b6ff", "#ff7aa2", "#67d66d"][index] || "#8ec5ff";
+    const control = index === 0 ? "player" : "ai";
+    hiders.push(createHider(index, spawn, color, control));
+  }
+
+  config.props.forEach((entry, index) => {
+    const [x, y, z, kind] = entry;
+    const mesh = createPropMesh(kind);
+    mesh.position.set(x, y, z);
+    mesh.userData.propId = `prop-${index}`;
+    gameplayRoot.add(mesh);
+    props.push({ id: `prop-${index}`, kind, mesh, radius: propTypes[kind].radius });
+  });
+
+  const puzzleLayout = mode === "tutorial" ? [config.puzzles[0]] : config.puzzles;
+  puzzleLayout.forEach((coords, index) => {
+    const puzzle = createPuzzle(new THREE.Vector3(...coords), index);
+    puzzles.push(puzzle);
+    gameplayRoot.add(puzzle.mesh);
+  });
+
+  if (mode === "tutorial") {
+    state.controlMode = "hider";
+    state.stats.roleAtStart = "Verstopper";
+  } else {
+    assignRandomControlRole();
+  }
+  updateRoleButton();
+  updateHud();
+}
+
+function startMap(mapKey) {
+  const config = mapConfigs[mapKey] || mapConfigs.plaza;
+  hideMenu();
+  setupRound(config, "round");
+}
+
+function startTutorial() {
+  hideMenu();
+  setupRound(mapConfigs.garden, "tutorial");
+}
+
+function cycleControlMode() {
+  if (!state.running) {
     return;
   }
   if (state.mode === "tutorial" && state.tutorial.stage < 3) {
     state.message = tutorialMessage();
+    updateHud();
     return;
   }
-  const angle = seeker.facing;
-  state.mistCooldown = 0.4;
-  if (state.mode === "tutorial") {
-    state.tutorial.threwMist = true;
+  state.controlMode = state.controlMode === "seeker" ? "hider" : "seeker";
+  updateRoleButton();
+  state.message = state.controlMode === "seeker" ? "Je bestuurt nu de tikker." : "Je bestuurt nu de verstopper.";
+  updateHud();
+}
+
+function movementVector() {
+  const direction = new THREE.Vector3();
+  if (keys.has("w") || keys.has("arrowup")) {
+    direction.z -= 1;
   }
-  state.seekerShots.push({
-    x: seeker.x + Math.cos(angle) * 34,
-    y: seeker.y + Math.sin(angle) * 34,
-    vx: Math.cos(angle) * 185,
-    vy: Math.sin(angle) * 185,
-    radius: 22,
-    life: 0.38,
+  if (keys.has("s") || keys.has("arrowdown")) {
+    direction.z += 1;
+  }
+  if (keys.has("a") || keys.has("arrowleft")) {
+    direction.x -= 1;
+  }
+  if (keys.has("d") || keys.has("arrowright")) {
+    direction.x += 1;
+  }
+  if (direction.lengthSq() > 0) {
+    direction.normalize();
+  }
+  return direction;
+}
+
+function keepInBounds(position) {
+  position.x = clamp(position.x, -world.width * 0.5 + 3, world.width * 0.5 - 3);
+  position.z = clamp(position.z, -world.depth * 0.5 + 3, world.depth * 0.5 - 3);
+}
+
+function resolvePropCollisions(position, radius) {
+  props.forEach((prop) => {
+    tmpVec.copy(position).sub(prop.mesh.position);
+    tmpVec.y = 0;
+    const distance = tmpVec.length();
+    const minimum = radius + prop.radius * 0.78;
+    if (distance > 0 && distance < minimum) {
+      tmpVec.normalize().multiplyScalar(minimum - distance);
+      position.add(tmpVec);
+    }
   });
 }
 
-function morphHider(hider, prop) {
-  hider.disguisedAs = { id: prop.id, kind: prop.kind };
+function moveActor(actor, direction, delta) {
+  if (!actor || direction.lengthSq() === 0) {
+    return 0;
+  }
+  tmpVec.copy(direction).multiplyScalar(actor.speed * delta);
+  actor.mesh.position.add(tmpVec);
+  keepInBounds(actor.mesh.position);
+  resolvePropCollisions(actor.mesh.position, actor.radius);
+  actor.facing.copy(direction);
+  if (actor.moveMemory) {
+    actor.moveMemory.copy(direction);
+  }
+  actor.mesh.rotation.y = Math.atan2(direction.x, direction.z);
+  return tmpVec.length();
+}
+
+function burstShot(shot) {
+  const cloud = createCloud(shot.mesh.position.clone());
+  clouds.push(cloud);
+  gameplayRoot.remove(shot.mesh);
+  shot.dead = true;
+}
+
+function tagHider(hider) {
+  if (hider.out) {
+    return;
+  }
+  hider.out = true;
+  clearDisguise(hider);
+  hider.mesh.visible = false;
+  state.stats.taggedHiders += 1;
+  const remaining = activeHiders().length;
+  state.message = remaining > 0 ? `Een verstopper is getikt. Nog ${remaining} over.` : "Alle verstoppers zijn getikt.";
+}
+
+function launchMist(direction, isPlayerShot = false) {
+  if (!state.running || state.mistCooldown > 0) {
+    return false;
+  }
+  const forward = direction ? direction.clone() : seeker.facing.clone();
+  if (forward.lengthSq() === 0) {
+    forward.set(0, 0, 1);
+  }
+  forward.normalize();
+
+  const origin = seeker.mesh.position.clone().add(forward.clone().multiplyScalar(2.2));
+  origin.y = 2.8;
+  shots.push(createShot(origin, forward));
+  state.mistCooldown = 0.7;
+  state.message = "Je gooit een korte Phanto-mistworp.";
+
+  if (isPlayerShot && state.mode === "tutorial" && state.tutorial.stage >= 3) {
+    state.tutorial.threwMist = true;
+    finishRound("Tutorial voltooid", "Je hebt alle tutorialstappen afgerond.");
+  }
+  return true;
+}
+
+function tryThrowMist(autoDirection = null) {
+  if (state.controlMode !== "seeker") {
+    return;
+  }
+  launchMist(autoDirection, true);
+}
+
+function solvePuzzle(puzzle, delta, solver) {
+  if (puzzle.solved) {
+    return;
+  }
+  puzzle.progress = clamp(puzzle.progress + delta, 0, 1);
+  if (puzzle.progress >= 1) {
+    puzzle.solved = true;
+    state.stats.solvedPuzzles += 1;
+    state.timeLeft = Math.max(0, state.timeLeft - state.puzzlePenalty);
+    if (solver && solver.control === "player") {
+      state.message = `Puzzel opgelost. De tijd van de tikker is ${state.puzzlePenalty} seconden korter.`;
+    }
+    if (state.mode === "tutorial") {
+      state.tutorial.solvedPuzzle = true;
+      advanceTutorialStage(3);
+    }
+  }
+}
+
+function nearestPuzzle(actor) {
+  let best = null;
+  let bestDistance = Infinity;
+  puzzles.forEach((puzzle) => {
+    if (puzzle.solved) {
+      return;
+    }
+    const distance = actor.mesh.position.distanceToSquared(puzzle.mesh.position);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = puzzle;
+    }
+  });
+  return best;
+}
+
+function controlledActor() {
+  return state.controlMode === "seeker" ? seeker : getPlayerHider();
+}
+
+function updatePlayer(delta) {
+  const actor = controlledActor();
+  if (!actor) {
+    return;
+  }
+  const direction = movementVector();
+  const walked = moveActor(actor, direction, delta);
+
+  if (state.mode === "tutorial" && state.tutorial.stage === 0 && walked > 0) {
+    state.tutorial.walked += walked;
+    if (state.tutorial.walked > 10) {
+      advanceTutorialStage(1);
+    }
+  }
+
+  if (state.controlMode === "hider") {
+    const player = getPlayerHider();
+    if (player && player.disguiseMesh) {
+      player.disguiseMesh.rotation.y += delta * 0.6;
+    }
+
+    const puzzle = nearestPuzzle(player);
+    const closeEnough = puzzle && player.mesh.position.distanceTo(puzzle.mesh.position) < 4.2;
+    if (closeEnough && keys.has("e") && (state.mode !== "tutorial" || state.tutorial.stage >= 2)) {
+      solvePuzzle(puzzle, delta * 0.85, player);
+    } else if (puzzle && !puzzle.solved) {
+      puzzle.progress = clamp(puzzle.progress - delta * 0.4, 0, 1);
+    }
+  }
+}
+
+function updateAiHiders(delta) {
+  hiders.forEach((hider) => {
+    if (hider.out || hider.control === "player") {
+      return;
+    }
+
+    hider.aiTimer -= delta;
+    const nearest = nearestPuzzle(hider);
+    const seekerDistance = hider.mesh.position.distanceTo(seeker.mesh.position);
+
+    if (seekerDistance < 15) {
+      tmpVec.copy(hider.mesh.position).sub(seeker.mesh.position).setY(0).normalize();
+      hider.moveTarget.copy(hider.mesh.position).add(tmpVec.multiplyScalar(12));
+      hider.aiTimer = 0.5;
+      clearDisguise(hider);
+    } else if (nearest && (!hider.targetPuzzleId || hider.aiTimer <= 0)) {
+      hider.targetPuzzleId = nearest.id;
+      hider.moveTarget.copy(nearest.mesh.position);
+      hider.aiTimer = rand(1.8, 3.4);
+    } else if (hider.aiTimer <= 0) {
+      hider.moveTarget.set(rand(-58, 58), 0, rand(-42, 42));
+      hider.aiTimer = rand(1.8, 3.8);
+      if (!hider.disguisedAs && Math.random() < 0.35) {
+        const prop = props[(Math.random() * props.length) | 0];
+        applyDisguise(hider, prop.kind);
+      }
+    }
+
+    tmpVec.copy(hider.moveTarget).sub(hider.mesh.position).setY(0);
+    if (tmpVec.lengthSq() > 1) {
+      tmpVec.normalize();
+      moveActor(hider, tmpVec, delta);
+    }
+
+    if (nearest && !nearest.solved && hider.mesh.position.distanceTo(nearest.mesh.position) < 4.1) {
+      solvePuzzle(nearest, delta * 0.45, hider);
+    }
+  });
+}
+
+function updateAiSeeker(delta) {
+  if (state.controlMode === "seeker") {
+    return;
+  }
+  seeker.aiCooldown -= delta;
+  const targets = activeHiders();
+  if (!targets.length) {
+    return;
+  }
+
+  let target = targets[0];
+  let bestDistance = seeker.mesh.position.distanceToSquared(target.mesh.position);
+  for (let index = 1; index < targets.length; index += 1) {
+    const distance = seeker.mesh.position.distanceToSquared(targets[index].mesh.position);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      target = targets[index];
+    }
+  }
+
+  tmpVec.copy(target.mesh.position).sub(seeker.mesh.position).setY(0);
+  const distance = tmpVec.length();
+  if (distance > 0.8) {
+    tmpVec.normalize();
+    moveActor(seeker, tmpVec, delta);
+  }
+
+  if (distance < 12 && seeker.aiCooldown <= 0) {
+    const throwDirection = target.mesh.position.clone().sub(seeker.mesh.position).setY(0).normalize();
+    launchMist(throwDirection);
+    seeker.aiCooldown = rand(0.9, 1.5);
+  }
+}
+
+function updateShots(delta) {
+  for (let index = shots.length - 1; index >= 0; index -= 1) {
+    const shot = shots[index];
+    if (shot.dead) {
+      shots.splice(index, 1);
+      continue;
+    }
+
+    const step = shot.speed * delta;
+    tmpVec.copy(shot.direction).multiplyScalar(step);
+    shot.mesh.position.add(tmpVec);
+    shot.travelled += step;
+    shot.life -= delta;
+    shot.mesh.rotation.y += delta * 4;
+
+    const pos = shot.mesh.position;
+    if (
+      shot.life <= 0 ||
+      shot.travelled >= shot.maxDistance ||
+      Math.abs(pos.x) > world.width * 0.5 - 2 ||
+      Math.abs(pos.z) > world.depth * 0.5 - 2
+    ) {
+      burstShot(shot);
+      shots.splice(index, 1);
+      continue;
+    }
+
+    let hitProp = false;
+    props.forEach((prop) => {
+      if (hitProp) {
+        return;
+      }
+      if (pos.distanceTo(prop.mesh.position) < prop.radius + 1.1) {
+        hitProp = true;
+      }
+    });
+    if (hitProp) {
+      burstShot(shot);
+      shots.splice(index, 1);
+      continue;
+    }
+
+    const hiderHit = activeHiders().find((hider) => pos.distanceTo(hider.mesh.position) < hider.radius + 1.2);
+    if (hiderHit) {
+      burstShot(shot);
+      shots.splice(index, 1);
+    }
+  }
+}
+
+function updateClouds(delta) {
+  for (let index = clouds.length - 1; index >= 0; index -= 1) {
+    const cloud = clouds[index];
+    cloud.life -= delta;
+    cloud.mesh.position.y += delta * 0.6;
+    cloud.mesh.scale.multiplyScalar(1 + delta * 0.18);
+    cloud.mesh.children.forEach((child, childIndex) => {
+      if (child.material && "opacity" in child.material) {
+        child.material.opacity = Math.max(0, 0.45 * cloud.life);
+      }
+      if (childIndex === cloud.mesh.children.length - 1) {
+        child.rotation.y += delta * 1.2;
+      }
+    });
+
+    activeHiders().forEach((hider) => {
+      if (cloud.hitSet.has(hider.id)) {
+        return;
+      }
+      if (cloud.mesh.position.distanceTo(hider.mesh.position) < cloud.radius) {
+        cloud.hitSet.add(hider.id);
+        tagHider(hider);
+      }
+    });
+
+    if (cloud.life <= 0) {
+      gameplayRoot.remove(cloud.mesh);
+      clouds.splice(index, 1);
+    }
+  }
+}
+
+function finishRound(title, text) {
+  state.running = false;
+  state.summaryReady = true;
+  state.winner = title;
+  summaryTitle.textContent = title;
+  summaryText.textContent = text;
+  summaryStats.innerHTML = "";
+
+  const stats = [];
+  if (state.mode === "tutorial") {
+    stats.push(`Map: ${state.mapName}`);
+    stats.push("Jouw rol: Verstopper");
+    stats.push(`Tutorialstap bereikt: ${state.tutorial.threwMist ? "Alle stappen" : state.tutorial.stage + 1}`);
+    stats.push(`Puzzels nog te doen: ${puzzles.filter((puzzle) => !puzzle.solved).length}`);
+  } else {
+    stats.push(`Map: ${state.mapName}`);
+    stats.push(`Jouw rol: ${state.stats.roleAtStart}`);
+    stats.push(`Verstoppers getikt: ${state.stats.taggedHiders}`);
+    stats.push(`Puzzels opgelost: ${state.stats.solvedPuzzles}`);
+    stats.push(`Puzzels nog te doen: ${puzzles.filter((puzzle) => !puzzle.solved).length}`);
+    stats.push(`Resterende tijd: ${Math.max(0, Math.ceil(state.timeLeft))}`);
+  }
+
+  stats.forEach((entry) => {
+    const item = document.createElement("li");
+    item.textContent = entry;
+    summaryStats.appendChild(item);
+  });
+  showSummary();
+  updateHud();
+}
+
+function checkWinConditions() {
+  if (!state.running) {
+    return;
+  }
+  if (activeHiders().length === 0) {
+    finishRound("Tikker wint", "Alle verstoppers zijn gepakt door de Phanto-mist.");
+    return;
+  }
+  if (state.timeLeft <= 0) {
+    finishRound("Verstoppers winnen", "De tijd van de tikker is op en niet iedereen is gepakt.");
+  }
+}
+
+function updatePuzzles(delta) {
+  puzzles.forEach((puzzle) => {
+    puzzle.pulse += delta * 2.2;
+    puzzle.mesh.userData.core.rotation.y += delta * 1.1;
+    puzzle.mesh.userData.ring.rotation.z += delta * 0.8;
+    const glow = puzzle.solved ? 0.18 : 1 + Math.sin(puzzle.pulse) * 0.15;
+    puzzle.mesh.userData.core.material.emissiveIntensity = glow;
+    puzzle.mesh.userData.ring.material.emissiveIntensity = puzzle.solved ? 0.2 : 0.8;
+    puzzle.mesh.position.y = puzzle.solved ? -0.2 : 0;
+  });
+}
+
+function updateSeekerVisual(delta) {
+  seeker.flashTimer = Math.max(0, seeker.flashTimer - delta);
+  const smile = seeker.mesh.userData.smile;
+  smile.material.emissiveIntensity = 0.4 + Math.sin(state.lastTime * 0.004) * 0.12;
+}
+
+function updateCamera(delta) {
+  const actor = controlledActor();
+  const target = actor ? actor.mesh.position : new THREE.Vector3();
+  const desired = new THREE.Vector3(target.x + 22, 34, target.z + 30);
+  camera.position.lerp(desired, 1 - Math.exp(-delta * 3));
+  camera.lookAt(target.x, 2.8, target.z);
+}
+
+function updateDecor(delta) {
+  decorativeClouds.forEach((cloud, index) => {
+    cloud.position.x += Math.sin(state.lastTime * 0.00015 + index) * delta * 1.1;
+    cloud.position.z += Math.cos(state.lastTime * 0.00012 + index * 2) * delta * 0.8;
+  });
+  mountainMeshes.forEach((mountain, index) => {
+    mountain.rotation.y += delta * 0.03 * (index % 2 === 0 ? 1 : -1);
+  });
+}
+
+function resizeRenderer() {
+  const rect = canvas.getBoundingClientRect();
+  renderer.setSize(rect.width, rect.height, false);
+  camera.aspect = rect.width / rect.height;
+  camera.updateProjectionMatrix();
+}
+
+function handlePointer(event) {
+  if (!state.running || state.controlMode !== "hider") {
+    return;
+  }
+  if (state.mode === "tutorial" && state.tutorial.stage < 1) {
+    return;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+
+  const player = getPlayerHider();
+  if (!player) {
+    return;
+  }
+
+  const intersections = raycaster.intersectObjects(props.map((prop) => prop.mesh), true);
+  if (!intersections.length) {
+    clearDisguise(player);
+    state.message = "Je laat je vermomming los.";
+    updateHud();
+    return;
+  }
+
+  const hit = intersections[0].object;
+  const propMesh = props.find((prop) => prop.mesh === hit || prop.mesh.children.includes(hit) || prop.mesh.children.some((child) => child === hit.parent));
+  if (!propMesh) {
+    return;
+  }
+  if (player.mesh.position.distanceTo(propMesh.mesh.position) > 6.5) {
+    state.message = "Dat voorwerp is te ver weg om in te veranderen.";
+    updateHud();
+    return;
+  }
+
+  applyDisguise(player, propMesh.kind);
+  state.message = `Je bent nu vermomd als ${propMesh.kind}.`;
   if (state.mode === "tutorial") {
     state.tutorial.transformed = true;
     advanceTutorialStage(2);
-    state.message = tutorialMessage();
   }
-  updateStatusPanel();
+  updateHud();
 }
 
-function solvePuzzle(hider, puzzle, dt) {
-  if (puzzle.solved || hider.out) {
-    return;
-  }
-  puzzle.progress += dt;
-  if (puzzle.progress >= 2.4) {
-    puzzle.solved = true;
-    puzzle.progress = 1;
-    if (state.mode !== "tutorial") {
-      state.timeLeft = Math.max(18, state.timeLeft - state.puzzlePenalty);
-    } else {
-      state.tutorial.solvedPuzzle = true;
-      advanceTutorialStage(3);
-      state.message = tutorialMessage();
-    }
-    updateStatusPanel();
-  }
-}
+function tick(time) {
+  const delta = Math.min(0.05, clock.getDelta());
+  state.lastTime = time;
 
-function updateSeeker(dt) {
-  if (!state.running) {
-    return;
-  }
-  const { dx, dy } = getMovementInput();
-  if (state.controlMode === "seeker") {
-    moveEntity(seeker, dx, dy, dt);
-    if (dx !== 0 || dy !== 0) {
-      seeker.facing = Math.atan2(dy, dx);
-    }
-  }
-}
-
-function chooseAiPuzzle(hider) {
-  const options = puzzles.filter((puzzle) => !puzzle.solved);
-  if (!options.length) {
-    hider.targetPuzzleId = null;
-    return null;
-  }
-  const choice = options[Math.floor(Math.random() * options.length)];
-  hider.targetPuzzleId = choice.id;
-  return choice;
-}
-
-function updateAiHider(hider, dt) {
-  hider.aiTimer -= dt;
-  if (hider.aiTimer <= 0) {
-    hider.aiTimer = rand(1.8, 3.8);
-    const prop = getNearestProp(hider, 140);
-    if (prop && Math.random() < 0.75) {
-      morphHider(hider, prop);
-    }
-    chooseAiPuzzle(hider);
+  if (state.running) {
+    state.timeLeft -= delta;
+    state.mistCooldown = Math.max(0, state.mistCooldown - delta);
+    updatePlayer(delta);
+    updateAiHiders(delta);
+    updateAiSeeker(delta);
+    updateShots(delta);
+    updateClouds(delta);
+    updatePuzzles(delta);
+    updateSeekerVisual(delta);
+    checkWinConditions();
   }
 
-  let targetPuzzle = puzzles.find((puzzle) => puzzle.id === hider.targetPuzzleId && !puzzle.solved);
-  if (!targetPuzzle) {
-    targetPuzzle = chooseAiPuzzle(hider);
-  }
-
-  if (targetPuzzle) {
-    const d = distance(hider, targetPuzzle);
-    if (d > 44) {
-      moveEntity(hider, targetPuzzle.x - hider.x, targetPuzzle.y - hider.y, dt);
-    } else {
-      solvePuzzle(hider, targetPuzzle, dt * 0.65);
-    }
-  }
+  updateDecor(delta);
+  updateCamera(delta);
+  updateHud();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
 }
 
-function updatePlayerHider(hider, dt) {
-  if (state.controlMode === "hider") {
-    const { dx, dy } = getMovementInput();
-    moveEntity(hider, dx, dy, dt);
-  }
-  const nearbyPuzzle = getNearestPuzzle(hider);
-  if (state.controlMode === "hider" && nearbyPuzzle && keys.has("KeyE")) {
-    if (state.mode === "tutorial" && state.tutorial.stage < 2) {
-      state.message = tutorialMessage();
-      return;
-    }
-    solvePuzzle(hider, nearbyPuzzle, dt);
-  }
-}
-
-function updateHiders(dt) {
-  for (const hider of hiders) {
-    if (hider.out) {
-      continue;
-    }
-    if (hider.control === "player") {
-      updatePlayerHider(hider, dt);
-    } else {
-      updateAiHider(hider, dt);
-    }
-  }
-}
-
-function burstMist(shot) {
-  for (let i = 0; i < 18; i += 1) {
-    const angle = (i / 18) * TAU;
-    state.particles.push({
-      x: shot.x,
-      y: shot.y,
-      vx: Math.cos(angle) * rand(30, 120),
-      vy: Math.sin(angle) * rand(30, 120),
-      life: rand(0.35, 0.8),
-      radius: rand(10, 26),
-    });
-  }
-  state.mistClouds.push({ x: shot.x, y: shot.y, radius: 108, life: 1.2 });
-}
-
-function tagHidersNear(x, y, radius) {
-  for (const hider of hiders) {
-    if (hider.out) {
-      continue;
-    }
-    if (distance(hider, { x, y }) < radius + hider.radius) {
-      hider.out = true;
-      hider.disguisedAs = null;
-      state.stats.taggedHiders += 1;
-      state.message = "Er is iemand getikt door de paarse mist.";
-      updateStatusPanel();
-    }
-  }
-}
-
-function fillSummary() {
-  const mapLabel = state.mode === "tutorial" ? "Tutorial" : mapConfigs[state.currentMap].name;
-  const roleLabel = state.stats.roleAtStart === "seeker" ? "Tikker" : "Verstopper";
-  const remainingPuzzles = puzzles.length - state.stats.solvedPuzzles;
-  const roleWon = (state.winner === "tikker" && state.stats.roleAtStart === "seeker") ||
-    (state.winner === "verstoppers" && state.stats.roleAtStart === "hider");
-
-  summaryTitle.textContent = state.mode === "tutorial"
-    ? "Tutorial Klaar"
-    : state.winner === "tikker"
-      ? "De Tikker Wint"
-      : "De Verstoppers Winnen";
-
-  summaryText.textContent = state.mode === "tutorial"
-    ? "Je hebt alle tutorialstappen gedaan. Je kunt nog een keer oefenen of terug naar het menu."
-    : roleWon
-      ? "Mooie ronde. Jouw rol heeft gewonnen."
-      : "De ronde is klaar. Jouw rol heeft deze keer niet gewonnen.";
-
-  summaryStats.innerHTML = "";
-  [
-    `Map: ${mapLabel}`,
-    `Jouw rol: ${roleLabel}`,
-    `Puzzels opgelost: ${state.stats.solvedPuzzles}/${puzzles.length}`,
-    `Verstoppers getikt: ${state.stats.taggedHiders}`,
-    state.mode === "tutorial"
-      ? `Tutorial status: ${state.tutorial.threwMist ? "alle stappen gehaald" : "nog niet afgerond"}`
-      : `Puzzels nog te doen: ${remainingPuzzles}`,
-    state.mode === "tutorial"
-      ? "Tijd speelde hier geen rol."
-      : `Resterende tijd op de klok: ${Math.ceil(state.timeLeft)} sec`,
-  ].forEach((line) => {
-    const item = document.createElement("li");
-    item.textContent = line;
-    summaryStats.appendChild(item);
-  });
-}
-
-function updateShots(dt) {
-  const nextShots = [];
-  for (const shot of state.seekerShots) {
-    shot.life -= dt;
-    shot.x += shot.vx * dt;
-    shot.y += shot.vy * dt;
-    shot.radius += dt * 42;
-    const hitProp = props.some((prop) => distance(shot, prop) < shot.radius + 30);
-    const expired = shot.life <= 0 || shot.x < 0 || shot.y < 0 || shot.x > world.width || shot.y > world.height || hitProp;
-    if (expired) {
-      burstMist(shot);
-      tagHidersNear(shot.x, shot.y, 92);
-    } else {
-      nextShots.push(shot);
-    }
-  }
-  state.seekerShots = nextShots;
-}
-
-function updateMistClouds(dt) {
-  for (const cloud of state.mistClouds) {
-    cloud.life -= dt;
-    cloud.radius *= 0.992;
-    tagHidersNear(cloud.x, cloud.y, cloud.radius * 0.55);
-  }
-  state.mistClouds = state.mistClouds.filter((cloud) => cloud.life > 0);
-}
-
-function updateParticles(dt) {
-  state.particles = state.particles.filter((particle) => {
-    particle.life -= dt;
-    particle.x += particle.vx * dt;
-    particle.y += particle.vy * dt;
-    particle.radius *= 0.987;
-    return particle.life > 0;
-  });
-}
-
-function updateCamera() {
-  const focus = state.controlMode === "seeker" ? seeker : getPlayerHider() || seeker;
-  camera.x = clamp(focus.x - canvas.width * 0.5, 0, world.width - canvas.width);
-  camera.y = clamp(focus.y - canvas.height * 0.5, 0, world.height - canvas.height);
-}
-
-function checkWinState() {
-  if (state.mode === "tutorial") {
-    return;
-  }
-  const activeHiders = hiders.filter((hider) => !hider.out);
-  if (!activeHiders.length && state.running) {
-    state.running = false;
-    state.winner = "tikker";
-    state.message = "Alle verstoppers zijn getikt. De tikker wint.";
-    fillSummary();
-    showSummary();
-  } else if (state.timeLeft <= 0 && state.running) {
-    state.running = false;
-    state.winner = "verstoppers";
-    state.message = "De tijd is op. De verstoppers winnen.";
-    fillSummary();
-    showSummary();
-  }
-}
-
-function update(dt) {
-  if (!state.running) {
-    updateParticles(dt);
-    return;
-  }
-  if (state.mode !== "tutorial") {
-    state.timeLeft = Math.max(0, state.timeLeft - dt);
-  }
-  state.statusTimer -= dt;
-  state.mistCooldown = Math.max(0, state.mistCooldown - dt);
-  updateSeeker(dt);
-  updateHiders(dt);
-  updateShots(dt);
-  updateMistClouds(dt);
-  updateParticles(dt);
-  updateCamera();
-  if (state.mode === "tutorial" && state.tutorial.stage === 3 && state.tutorial.threwMist) {
-    state.running = false;
-    state.winner = "tutorial";
-    fillSummary();
-    showSummary();
-  }
-  checkWinState();
-  if (state.statusTimer <= 0) {
-    state.statusTimer = 0.25;
-    updateStatusPanel();
-  }
-}
-
-function drawBackground() {
-  const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  sky.addColorStop(0, state.currentMap === "garden" ? "#e3efd5" : "#f3ead1");
-  sky.addColorStop(0.4, state.currentMap === "garden" ? "#b6cf9f" : "#dbc89f");
-  sky.addColorStop(1, state.currentMap === "garden" ? "#7c9366" : "#9b845f");
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  const horizon = 188;
-  ctx.fillStyle = state.currentMap === "garden" ? "#7e8f63" : "#c5af87";
-  ctx.fillRect(0, horizon, canvas.width, canvas.height - horizon);
-  ctx.fillStyle = state.currentMap === "garden" ? "#97a97b" : "#ad8e60";
-  for (let x = -world.floorGrid; x < world.width; x += world.floorGrid) {
-    const sx = worldToScreen(x, 0).x;
-    ctx.fillRect(sx, horizon, 2, canvas.height - horizon);
-  }
-  for (let y = 0; y < world.height; y += world.floorGrid) {
-    const sy = worldToScreen(0, y).y;
-    ctx.fillRect(0, sy, canvas.width, 2);
-  }
-}
-
-function drawShadow(x, y, radiusX, radiusY, alpha = 0.18) {
-  const p = worldToScreen(x, y);
-  ctx.fillStyle = `rgba(41, 25, 23, ${alpha})`;
-  ctx.beginPath();
-  ctx.ellipse(p.x, p.y + 14, radiusX, radiusY, 0, 0, TAU);
-  ctx.fill();
-}
-
-function drawProp(prop) {
-  const template = propTemplates[prop.kind];
-  const p = worldToScreen(prop.x, prop.y);
-  drawShadow(prop.x, prop.y, template.w * 0.42, 14);
-  if (template.type === "box") {
-    ctx.fillStyle = template.color;
-    ctx.fillRect(p.x - template.w * 0.5, p.y - template.h + 8, template.w, template.h);
-    ctx.strokeStyle = template.accent;
-    ctx.lineWidth = 4;
-    ctx.strokeRect(p.x - template.w * 0.5 + 6, p.y - template.h + 16, template.w - 12, template.h - 20);
-  } else if (template.type === "round") {
-    ctx.fillStyle = template.color;
-    ctx.beginPath();
-    ctx.ellipse(p.x, p.y - 22, template.w * 0.5, template.h * 0.5, 0, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = template.accent;
-    ctx.fillRect(p.x - template.w * 0.42, p.y - 40, template.w * 0.84, 10);
-    ctx.fillRect(p.x - template.w * 0.42, p.y - 8, template.w * 0.84, 10);
-  } else if (template.type === "blob") {
-    ctx.fillStyle = template.color;
-    ctx.beginPath();
-    ctx.arc(p.x - 18, p.y - 20, 24, 0, TAU);
-    ctx.arc(p.x + 8, p.y - 24, 28, 0, TAU);
-    ctx.arc(p.x + 26, p.y - 10, 20, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = template.accent;
-    ctx.beginPath();
-    ctx.arc(p.x + 10, p.y - 28, 11, 0, TAU);
-    ctx.fill();
-  } else if (template.type === "lamp") {
-    ctx.fillStyle = template.color;
-    ctx.fillRect(p.x - 6, p.y - template.h + 10, 12, template.h - 10);
-    ctx.fillStyle = template.accent;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y - template.h + 10, 16, 0, TAU);
-    ctx.fill();
-  } else if (template.type === "tall") {
-    ctx.fillStyle = template.color;
-    ctx.fillRect(p.x - template.w * 0.5, p.y - template.h + 6, template.w, template.h);
-    ctx.fillStyle = template.accent;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y - template.h + 2, 16, 0, TAU);
-    ctx.fill();
-  }
-}
-
-function drawPuzzle(puzzle) {
-  const p = worldToScreen(puzzle.x, puzzle.y);
-  drawShadow(puzzle.x, puzzle.y, 34, 12, 0.14);
-  ctx.fillStyle = puzzle.solved ? "#75c36a" : "#4936a6";
-  ctx.fillRect(p.x - 26, p.y - 42, 52, 42);
-  ctx.fillStyle = "#efe4ff";
-  ctx.fillRect(p.x - 18, p.y - 34, 36, 8);
-  ctx.fillRect(p.x - 18, p.y - 18, 36 * puzzle.progress, 8);
-  ctx.font = "bold 16px Georgia";
-  ctx.fillText(puzzle.solved ? "OK" : "?", p.x - 8, p.y - 14);
-}
-
-function drawMask(cx, cy, scale, alpha) {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.scale(scale, scale);
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = seeker.maskHue;
-  ctx.beginPath();
-  ctx.moveTo(-28, -4);
-  ctx.quadraticCurveTo(-10, -36, 0, -34);
-  ctx.quadraticCurveTo(10, -36, 28, -4);
-  ctx.quadraticCurveTo(20, 28, 0, 34);
-  ctx.quadraticCurveTo(-20, 28, -28, -4);
-  ctx.fill();
-  ctx.fillStyle = "#cf1f2e";
-  ctx.beginPath();
-  ctx.arc(-10, -4, 7, 0, TAU);
-  ctx.arc(10, -4, 7, 0, TAU);
-  ctx.fill();
-  ctx.strokeStyle = "#5a2a18";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(-16, 14);
-  ctx.quadraticCurveTo(0, 28, 16, 14);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawMistSmile(cx, cy, scale, alpha) {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.scale(scale, scale);
-  ctx.globalAlpha = alpha;
-  ctx.strokeStyle = "#e5c8ff";
-  ctx.lineWidth = 6;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(-16, 12);
-  ctx.quadraticCurveTo(0, 28, 16, 12);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawSeeker() {
-  const p = worldToScreen(seeker.x, seeker.y);
-  drawShadow(seeker.x, seeker.y, 32, 14, 0.22);
-  ctx.fillStyle = "#8247e6";
-  ctx.beginPath();
-  ctx.arc(p.x, p.y - 10, seeker.radius, 0, TAU);
-  ctx.fill();
-  ctx.fillStyle = "#f2c59c";
-  ctx.beginPath();
-  ctx.arc(p.x, p.y - 48, 18, 0, TAU);
-  ctx.fill();
-  drawMask(p.x, p.y - 48, 0.7, 1);
-}
-
-function drawHider(hider) {
-  const p = worldToScreen(hider.x, hider.y);
-  const showBody = !hider.disguisedAs;
-  if (hider.disguisedAs) {
-    const prop = props.find((item) => item.id === hider.disguisedAs.id);
-    if (prop) {
-      drawProp({ ...prop, x: hider.x, y: hider.y, kind: hider.disguisedAs.kind });
-    }
-  }
-  if (showBody) {
-    drawShadow(hider.x, hider.y, 24, 10, 0.18);
-    ctx.fillStyle = hider.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y - 12, hider.radius, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = "#fff6ef";
-    ctx.beginPath();
-    ctx.arc(p.x, p.y - 40, 14, 0, TAU);
-    ctx.fill();
-  }
-  if (hider.out) {
-    ctx.strokeStyle = "#ff3366";
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(p.x - 30, p.y - 60);
-    ctx.lineTo(p.x + 30, p.y);
-    ctx.moveTo(p.x + 30, p.y - 60);
-    ctx.lineTo(p.x - 30, p.y);
-    ctx.stroke();
-  }
-}
-
-function drawShot(shot) {
-  const p = worldToScreen(shot.x, shot.y);
-  const gradient = ctx.createRadialGradient(p.x, p.y, 6, p.x, p.y, shot.radius * 1.9);
-  gradient.addColorStop(0, "rgba(255,255,255,0.92)");
-  gradient.addColorStop(0.25, "rgba(191,144,255,0.95)");
-  gradient.addColorStop(1, "rgba(104,35,198,0)");
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, shot.radius * 1.9, 0, TAU);
-  ctx.fill();
-  drawMistSmile(p.x, p.y, 0.52 + shot.radius * 0.008, 0.95);
-}
-
-function drawParticle(particle) {
-  const p = worldToScreen(particle.x, particle.y);
-  ctx.fillStyle = `rgba(139, 77, 255, ${particle.life})`;
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, particle.radius, 0, TAU);
-  ctx.fill();
-  drawMistSmile(p.x, p.y, particle.radius * 0.014, particle.life * 0.6);
-}
-
-function drawMistCloud(cloud) {
-  const p = worldToScreen(cloud.x, cloud.y);
-  const alpha = cloud.life / 1.2;
-  const gradient = ctx.createRadialGradient(p.x, p.y, 12, p.x, p.y, cloud.radius);
-  gradient.addColorStop(0, `rgba(242, 224, 255, ${0.55 * alpha})`);
-  gradient.addColorStop(0.35, `rgba(162, 89, 255, ${0.45 * alpha})`);
-  gradient.addColorStop(1, "rgba(104,35,198,0)");
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, cloud.radius, 0, TAU);
-  ctx.fill();
-  drawMistSmile(p.x, p.y, 1.05 + (1 - alpha) * 0.22, 0.55 * alpha);
-}
-
-function drawWorld() {
-  drawBackground();
-  const drawables = [];
-  props.forEach((prop) => drawables.push({ y: prop.y, fn: () => drawProp(prop) }));
-  puzzles.forEach((puzzle) => drawables.push({ y: puzzle.y, fn: () => drawPuzzle(puzzle) }));
-  hiders.forEach((hider) => drawables.push({ y: hider.y, fn: () => drawHider(hider) }));
-  drawables.push({ y: seeker.y, fn: drawSeeker });
-  state.seekerShots.forEach((shot) => drawables.push({ y: shot.y, fn: () => drawShot(shot) }));
-  state.mistClouds.forEach((cloud) => drawables.push({ y: cloud.y, fn: () => drawMistCloud(cloud) }));
-  state.particles.forEach((particle) => drawables.push({ y: particle.y, fn: () => drawParticle(particle) }));
-  drawables.sort((a, b) => a.y - b.y);
-  drawables.forEach((item) => item.fn());
-}
-
-function drawHud() {
-  ctx.fillStyle = "rgba(28, 20, 35, 0.68)";
-  ctx.fillRect(18, 18, 520, 118);
-  ctx.fillStyle = "#fff8ef";
-  ctx.font = "bold 34px Georgia";
-  ctx.fillText(state.mode === "tutorial" ? "Tutorial" : `Tijd: ${Math.ceil(state.timeLeft)}`, 34, 56);
-  ctx.font = "18px Georgia";
-  ctx.fillText(`Map: ${state.mode === "tutorial" ? "Leerzone" : mapConfigs[state.currentMap].name}`, 34, 86);
-  ctx.fillText(`Bestuurd: ${state.controlMode === "seeker" ? "Tikker" : "Verstopper"}`, 34, 112);
-  ctx.textAlign = "right";
-  ctx.fillText(`Spelers: ${hiders.length + 1}`, canvas.width - 30, 48);
-  ctx.fillText(`Puzzels nog te doen: ${puzzles.length - state.stats.solvedPuzzles}`, canvas.width - 30, 74);
-  ctx.textAlign = "left";
-  ctx.fillStyle = "rgba(255, 249, 242, 0.9)";
-  ctx.fillRect(18, canvas.height - 92, canvas.width - 36, 58);
-  ctx.fillStyle = "#271b29";
-  ctx.font = "18px Georgia";
-  ctx.fillText(state.mode === "tutorial" ? tutorialMessage() : state.message, 34, canvas.height - 56);
-}
-
-function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawWorld();
-  drawHud();
-}
-
-function frame(timestamp) {
-  if (!state.lastTime) {
-    state.lastTime = timestamp;
-  }
-  const dt = Math.min(0.033, (timestamp - state.lastTime) / 1000);
-  state.lastTime = timestamp;
-  update(dt);
-  render();
-  requestAnimationFrame(frame);
-}
-
+window.addEventListener("resize", resizeRenderer);
 window.addEventListener("keydown", (event) => {
-  keys.add(event.code);
-  if (event.code === "Tab") {
-    if (state.mode === "tutorial" && state.tutorial.stage < 3) {
-      event.preventDefault();
-      state.message = tutorialMessage();
-      return;
-    }
+  const key = event.key.toLowerCase();
+  keys.add(key);
+
+  if (key === "tab") {
     event.preventDefault();
-    state.controlMode = state.controlMode === "seeker" ? "hider" : "seeker";
-    state.message = state.controlMode === "seeker"
-      ? "Je bestuurt nu de tikker. Druk op Shift voor mist."
-      : "Je bestuurt nu de verstopper. Klik op een voorwerp om te veranderen.";
-    updateRoleButton();
-    updateStatusPanel();
-  } else if ((event.code === "ShiftLeft" || event.code === "ShiftRight") && state.controlMode === "seeker") {
+    cycleControlMode();
+  }
+  if (key === "shift" && state.controlMode === "seeker") {
     event.preventDefault();
-    launchMist();
+    tryThrowMist();
   }
 });
 
 window.addEventListener("keyup", (event) => {
-  keys.delete(event.code);
+  keys.delete(event.key.toLowerCase());
 });
 
-canvas.addEventListener("mousemove", (event) => {
-  const rect = canvas.getBoundingClientRect();
-  mouse.x = event.clientX - rect.left;
-  mouse.y = event.clientY - rect.top;
-});
-
-canvas.addEventListener("click", (event) => {
-  if (state.controlMode !== "hider" || !state.running) {
-    return;
-  }
-  if (state.mode === "tutorial" && state.tutorial.stage < 1) {
-    state.message = tutorialMessage();
-    return;
-  }
-  const point = screenToWorld(event.clientX, event.clientY);
-  const hider = getPlayerHider();
-  if (!hider || hider.out) {
-    return;
-  }
-  let clickedProp = null;
-  let best = 42;
-  for (const prop of props) {
-    const d = Math.hypot(prop.x - point.x, prop.y - point.y);
-    if (d < best && distance(hider, prop) < 110) {
-      best = d;
-      clickedProp = prop;
-    }
-  }
-  if (clickedProp) {
-    morphHider(hider, clickedProp);
-  } else {
-    state.message = "Klik dichter op een voorwerp in de buurt van je verstopper om te veranderen.";
-  }
-});
+canvas.addEventListener("pointerdown", handlePointer);
 
 restartButton.addEventListener("click", () => {
-  if (state.mode === "menu") {
-    showMenu();
+  if (!state.playedRound) {
+    state.message = "Start eerst een map of de tutorial vanuit het menu.";
+    updateHud();
     return;
   }
-  resetRound();
-  state.lastTime = 0;
+  const config = mapConfigs[state.currentMap] || mapConfigs.plaza;
+  setupRound(config, state.mode === "tutorial" ? "tutorial" : "round");
+});
+
+menuButton.addEventListener("click", () => {
+  showMenu();
+});
+
+closeMenuButton.addEventListener("click", () => {
+  hideMenu();
 });
 
 roleButton.addEventListener("click", () => {
-  if (state.mode === "tutorial" && state.tutorial.stage < 3) {
-    state.message = tutorialMessage();
-    return;
-  }
-  state.controlMode = state.controlMode === "seeker" ? "hider" : "seeker";
-  state.message = state.controlMode === "seeker"
-    ? "Je bestuurt nu de tikker. Druk op Shift voor mist."
-    : "Je bestuurt nu de verstopper. Klik op een voorwerp om te veranderen.";
-  updateRoleButton();
-  updateStatusPanel();
+  cycleControlMode();
 });
 
-menuButton.addEventListener("click", showMenu);
-closeMenuButton.addEventListener("click", hideMenu);
 tutorialButton.addEventListener("click", () => {
-  state.currentMap = "plaza";
   startTutorial();
 });
-playAgainButton.addEventListener("click", () => {
-  hideSummary();
-  resetRound();
-  state.lastTime = 0;
+
+mapButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    startMap(button.dataset.map);
+  });
 });
+
+playAgainButton.addEventListener("click", () => {
+  const config = mapConfigs[state.currentMap] || mapConfigs.plaza;
+  setupRound(config, state.mode === "tutorial" ? "tutorial" : "round");
+});
+
 summaryMenuButton.addEventListener("click", () => {
   hideSummary();
   showMenu();
 });
-mapButtons.forEach((button) => {
-  button.addEventListener("click", () => startMap(button.dataset.map));
-});
-hideSummary();
+
+resizeRenderer();
+createWorldDecor(mapConfigs.plaza);
 updateRoleButton();
-requestAnimationFrame(frame);
+updateHud();
+requestAnimationFrame(tick);
