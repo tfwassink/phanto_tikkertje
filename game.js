@@ -261,7 +261,6 @@ function startTutorial() {
     seekerSpawn: { x: 760, y: 820 },
     hiderSpawns: [
       { id: "hider-1", x: 1120, y: 860, color: "#58b6ff" },
-      { id: "hider-2", x: 1450, y: 860, color: "#ff7aa2" },
     ],
     props: [
       [620, 540, "crate"], [810, 560, "barrel"], [980, 520, "bush"], [1180, 540, "lamp"],
