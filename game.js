@@ -556,7 +556,6 @@ function clearDisguise(hider) {
 function applyDisguise(hider, kind) {
   clearDisguise(hider);
   const disguise = createPropMesh(kind);
-  disguise.scale.multiplyScalar(0.58);
   disguise.position.set(0, 0, 0);
   hider.mesh.add(disguise);
   hider.disguiseMesh = disguise;
