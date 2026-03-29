@@ -237,7 +237,15 @@ function advanceTutorialStage(nextStage) {
   }
   state.tutorial.stage = nextStage;
   if (nextStage === 3) {
+    const player = getPlayerHider();
     state.controlMode = "seeker";
+    if (player && seeker.mesh) {
+      seeker.mesh.visible = true;
+      seeker.mesh.position.copy(player.mesh.position);
+      seeker.mesh.rotation.y = player.mesh.rotation.y;
+      seeker.facing.copy(player.moveMemory || new THREE.Vector3(0, 0, 1));
+      player.mesh.visible = false;
+    }
     updateRoleButton();
   }
   state.message = tutorialMessage();
@@ -688,14 +696,6 @@ function setupRound(config, mode) {
     hiders.push(createHider(index, spawn, color, control));
   }
 
-  if (mode === "tutorial" && hiders[0]) {
-    seeker.mesh.position.copy(hiders[0].mesh.position).add(new THREE.Vector3(-8, 0, -6));
-    keepInBounds(seeker.mesh.position);
-    seeker.facing.copy(hiders[0].mesh.position.clone().sub(seeker.mesh.position).setY(0).normalize());
-    seeker.mesh.rotation.y = Math.atan2(seeker.facing.x, seeker.facing.z);
-    seeker.aiCooldown = 0;
-  }
-
   config.props.forEach((entry, index) => {
     const [x, y, z, kind] = entry;
     const mesh = createPropMesh(kind);
@@ -715,7 +715,8 @@ function setupRound(config, mode) {
   if (mode === "tutorial") {
     state.controlMode = "hider";
     state.stats.roleAtStart = "Verstopper";
-    state.message = "Tutorial stap 1: loop eerst rond met WASD of de pijltjes. De tikker loopt al op de map.";
+    seeker.mesh.visible = false;
+    state.message = "Tutorial stap 1: loop eerst rond met WASD of de pijltjes.";
   } else {
     assignRandomControlRole();
   }
@@ -964,7 +965,7 @@ function updateAiHiders(delta) {
 }
 
 function updateAiSeeker(delta) {
-  if (state.controlMode === "seeker") {
+  if (state.controlMode === "seeker" || state.mode === "tutorial") {
     return;
   }
   seeker.aiCooldown -= delta;
