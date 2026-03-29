@@ -45,6 +45,13 @@ const state = {
     taggedHiders: 0,
     roleAtStart: "hider",
   },
+  tutorial: {
+    stage: 0,
+    walked: 0,
+    transformed: false,
+    solvedPuzzle: false,
+    threwMist: false,
+  },
 };
 
 const camera = {
@@ -190,6 +197,43 @@ function hideSummary() {
   summaryOverlay.classList.remove("visible");
 }
 
+function resetTutorialProgress() {
+  state.tutorial = {
+    stage: 0,
+    walked: 0,
+    transformed: false,
+    solvedPuzzle: false,
+    threwMist: false,
+  };
+}
+
+function tutorialMessage() {
+  if (state.mode !== "tutorial") {
+    return state.message;
+  }
+  if (state.tutorial.stage === 0) {
+    return "Tutorial stap 1: loop eerst rond met WASD of de pijltjes.";
+  }
+  if (state.tutorial.stage === 1) {
+    return "Tutorial stap 2: klik op een voorwerp dicht bij je om erin te veranderen.";
+  }
+  if (state.tutorial.stage === 2) {
+    return "Tutorial stap 3: ga naar een puzzel en houd E ingedrukt om hem op te lossen.";
+  }
+  if (state.tutorial.stage === 3) {
+    return "Tutorial stap 4: druk op Tab om tikker te worden en gooi daarna mist met Shift.";
+  }
+  return "Tutorial klaar. Je kent nu de basis van Phanto Tikkertje.";
+}
+
+function advanceTutorialStage(nextStage) {
+  if (state.mode !== "tutorial" || nextStage <= state.tutorial.stage) {
+    return;
+  }
+  state.tutorial.stage = nextStage;
+  state.message = tutorialMessage();
+}
+
 function updateRoleButton() {
   roleButton.textContent = state.controlMode === "seeker" ? "Bestuur: Tikker" : "Bestuur: Verstopper";
 }
@@ -218,6 +262,7 @@ function setupRound(config, mode) {
     taggedHiders: 0,
     roleAtStart: "hider",
   };
+  resetTutorialProgress();
   state.seekerShots = [];
   state.mistClouds = [];
   state.particles = [];
@@ -238,7 +283,7 @@ function setupRound(config, mode) {
   state.stats.roleAtStart = drawnRole;
 
   state.message = mode === "tutorial"
-    ? "Tutorial: loop met WASD, verander met klik in een voorwerp, druk op E bij een puzzel en gooi met Shift mist als tikker."
+    ? tutorialMessage()
     : drawnRole === "seeker"
       ? `Map geladen: ${config.name}. De loting zegt dat jij de tikker bent. Druk op Shift voor mist.`
       : `Map geladen: ${config.name}. De loting zegt dat jij een verstopper bent. Zoek props en puzzels.`;
@@ -302,8 +347,15 @@ function moveEntity(entity, dx, dy, dt) {
     return;
   }
   const length = Math.hypot(dx, dy) || 1;
-  entity.x = clamp(entity.x + (dx / length) * entity.speed * dt, 80, world.width - 80);
-  entity.y = clamp(entity.y + (dy / length) * entity.speed * dt, 80, world.height - 80);
+  const step = entity.speed * dt;
+  entity.x = clamp(entity.x + (dx / length) * step, 80, world.width - 80);
+  entity.y = clamp(entity.y + (dy / length) * step, 80, world.height - 80);
+  if (state.mode === "tutorial" && entity.control === "player" && state.tutorial.stage === 0) {
+    state.tutorial.walked += step;
+    if (state.tutorial.walked >= 180) {
+      advanceTutorialStage(1);
+    }
+  }
 }
 
 function getMovementInput() {
@@ -354,8 +406,15 @@ function launchMist() {
   if (!state.running || state.mistCooldown > 0) {
     return;
   }
+  if (state.mode === "tutorial" && state.tutorial.stage < 3) {
+    state.message = tutorialMessage();
+    return;
+  }
   const angle = seeker.facing;
   state.mistCooldown = 0.4;
+  if (state.mode === "tutorial") {
+    state.tutorial.threwMist = true;
+  }
   state.seekerShots.push({
     x: seeker.x + Math.cos(angle) * 34,
     y: seeker.y + Math.sin(angle) * 34,
@@ -368,7 +427,13 @@ function launchMist() {
 
 function morphHider(hider, prop) {
   hider.disguisedAs = { id: prop.id, kind: prop.kind };
-  state.message = `Verstopper veranderde in ${prop.kind}.`;
+  if (state.mode === "tutorial") {
+    state.tutorial.transformed = true;
+    advanceTutorialStage(2);
+    state.message = tutorialMessage();
+  } else {
+    state.message = `Verstopper veranderde in ${prop.kind}.`;
+  }
   updateStatusPanel();
 }
 
@@ -384,7 +449,9 @@ function solvePuzzle(hider, puzzle, dt) {
       state.timeLeft = Math.max(18, state.timeLeft - state.puzzlePenalty);
       state.message = `Puzzel opgelost. De tikker verloor ${state.puzzlePenalty} seconden.`;
     } else {
-      state.message = "Tutorial puzzel opgelost. Mooi, je snapt het systeem.";
+      state.tutorial.solvedPuzzle = true;
+      advanceTutorialStage(3);
+      state.message = tutorialMessage();
     }
     updateStatusPanel();
   }
@@ -447,6 +514,10 @@ function updatePlayerHider(hider, dt) {
   }
   const nearbyPuzzle = getNearestPuzzle(hider);
   if (state.controlMode === "hider" && nearbyPuzzle && keys.has("KeyE")) {
+    if (state.mode === "tutorial" && state.tutorial.stage < 2) {
+      state.message = tutorialMessage();
+      return;
+    }
     solvePuzzle(hider, nearbyPuzzle, dt);
   }
 }
@@ -508,7 +579,7 @@ function fillSummary() {
       : "De Verstoppers Winnen";
 
   summaryText.textContent = state.mode === "tutorial"
-    ? "Je tutorialronde is afgerond. Je kunt nog een keer oefenen of terug naar het menu."
+    ? "Je hebt alle tutorialstappen gedaan. Je kunt nog een keer oefenen of terug naar het menu."
     : roleWon
       ? "Mooie ronde. Jouw rol heeft gewonnen."
       : "De ronde is klaar. Jouw rol heeft deze keer niet gewonnen.";
@@ -520,7 +591,7 @@ function fillSummary() {
     `Puzzels opgelost: ${state.stats.solvedPuzzles}/${puzzles.length}`,
     `Verstoppers getikt: ${state.stats.taggedHiders}`,
     state.mode === "tutorial"
-      ? `Tutorial status: ${state.stats.solvedPuzzles === puzzles.length ? "alles gehaald" : "nog oefenruimte"}`
+      ? `Tutorial status: ${state.tutorial.threwMist ? "alle stappen gehaald" : "nog niet afgerond"}`
       : `Puzzels nog te doen: ${remainingPuzzles}`,
     state.mode === "tutorial"
       ? "Tijd speelde hier geen rol."
@@ -612,6 +683,12 @@ function update(dt) {
   updateMistClouds(dt);
   updateParticles(dt);
   updateCamera();
+  if (state.mode === "tutorial" && state.tutorial.stage === 3 && state.tutorial.threwMist) {
+    state.running = false;
+    state.winner = "tutorial";
+    fillSummary();
+    showSummary();
+  }
   checkWinState();
   if (state.statusTimer <= 0) {
     state.statusTimer = 0.25;
@@ -860,7 +937,7 @@ function drawHud() {
   ctx.fillRect(18, canvas.height - 92, canvas.width - 36, 58);
   ctx.fillStyle = "#271b29";
   ctx.font = "18px Georgia";
-  ctx.fillText(state.message, 34, canvas.height - 56);
+  ctx.fillText(state.mode === "tutorial" ? tutorialMessage() : state.message, 34, canvas.height - 56);
 }
 
 function render() {
@@ -883,6 +960,11 @@ function frame(timestamp) {
 window.addEventListener("keydown", (event) => {
   keys.add(event.code);
   if (event.code === "Tab") {
+    if (state.mode === "tutorial" && state.tutorial.stage < 3) {
+      event.preventDefault();
+      state.message = tutorialMessage();
+      return;
+    }
     event.preventDefault();
     state.controlMode = state.controlMode === "seeker" ? "hider" : "seeker";
     state.message = state.controlMode === "seeker"
@@ -908,6 +990,10 @@ canvas.addEventListener("mousemove", (event) => {
 
 canvas.addEventListener("click", (event) => {
   if (state.controlMode !== "hider" || !state.running) {
+    return;
+  }
+  if (state.mode === "tutorial" && state.tutorial.stage < 1) {
+    state.message = tutorialMessage();
     return;
   }
   const point = screenToWorld(event.clientX, event.clientY);
@@ -941,6 +1027,10 @@ restartButton.addEventListener("click", () => {
 });
 
 roleButton.addEventListener("click", () => {
+  if (state.mode === "tutorial" && state.tutorial.stage < 3) {
+    state.message = tutorialMessage();
+    return;
+  }
   state.controlMode = state.controlMode === "seeker" ? "hider" : "seeker";
   state.message = state.controlMode === "seeker"
     ? "Je bestuurt nu de tikker. Druk op Shift voor mist."
