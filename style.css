@@ -1,0 +1,247 @@
+:root {
+  --bg-top: #f4ead6;
+  --bg-mid: #e7e2cf;
+  --panel: rgba(255, 249, 239, 0.88);
+  --ink: #241e29;
+  --muted: #5f5b6b;
+  --line: rgba(73, 49, 64, 0.14);
+  --orange: #e97b3c;
+  --orange-dark: #ab4d20;
+  --violet: #7f4dff;
+  --rose: #d84477;
+  --gold: #f0bc4d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.85), transparent 26%),
+    radial-gradient(circle at 80% 20%, rgba(214, 180, 120, 0.2), transparent 24%),
+    linear-gradient(180deg, var(--bg-top), var(--bg-mid));
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  background-image:
+    radial-gradient(circle at 20px 20px, rgba(218, 196, 146, 0.8) 2px, transparent 3px),
+    radial-gradient(circle at 60px 50px, rgba(218, 196, 146, 0.55) 2px, transparent 3px);
+  background-size: 120px 120px;
+}
+
+.layout {
+  width: min(1380px, calc(100vw - 24px));
+  margin: 16px auto 20px;
+  display: grid;
+  gap: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.topbar,
+.sidepanel,
+.menu-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: 0 18px 42px rgba(65, 46, 29, 0.12);
+  backdrop-filter: blur(8px);
+}
+
+.topbar {
+  border-radius: 24px;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--rose);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+h1,
+h2,
+p,
+ul {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 3.8vw, 3.3rem);
+}
+
+.subtitle {
+  margin-top: 6px;
+  color: var(--muted);
+  max-width: 60ch;
+}
+
+.topbar-actions,
+.menu-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+button {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font: inherit;
+  font-weight: 700;
+  color: #fff8f2;
+  background: linear-gradient(180deg, var(--orange), var(--orange-dark));
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(158, 79, 39, 0.24);
+}
+
+button:hover {
+  filter: brightness(1.05);
+}
+
+.game-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 14px;
+  align-items: start;
+}
+
+#game {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 30px 70px rgba(38, 32, 31, 0.2);
+  background: linear-gradient(180deg, #efe5c8, #b8a37f);
+}
+
+.sidepanel {
+  border-radius: 24px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.panel-block {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 252, 246, 0.82);
+}
+
+.panel-block h2 {
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+}
+
+.panel-block p + p {
+  margin-top: 8px;
+}
+
+.status-list {
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  place-items: center;
+  padding: 24px;
+  background: rgba(42, 29, 38, 0.58);
+  z-index: 5;
+}
+
+.menu-overlay.visible {
+  display: grid;
+}
+
+.menu-card {
+  width: min(920px, 100%);
+  border-radius: 28px;
+  padding: 26px;
+}
+
+.menu-copy {
+  color: var(--muted);
+  max-width: 60ch;
+  margin-top: 8px;
+}
+
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+
+.map-card {
+  border-radius: 24px;
+  padding: 20px;
+  text-align: left;
+  min-height: 144px;
+  background:
+    linear-gradient(180deg, rgba(255, 201, 120, 0.95), rgba(209, 119, 67, 0.95)),
+    linear-gradient(180deg, var(--orange), var(--orange-dark));
+}
+
+.map-card[data-map="garden"] {
+  background:
+    linear-gradient(180deg, rgba(155, 214, 109, 0.95), rgba(93, 132, 73, 0.95)),
+    linear-gradient(180deg, #6c9a56, #48673c);
+}
+
+.map-title,
+.map-desc {
+  display: block;
+}
+
+.map-title {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+
+.map-desc {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 1100px) {
+  .game-wrap {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .map-grid {
+    grid-template-columns: 1fr;
+  }
+}
