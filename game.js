@@ -6,7 +6,12 @@ const menuButton = document.getElementById("menuButton");
 const closeMenuButton = document.getElementById("closeMenuButton");
 const tutorialButton = document.getElementById("tutorialButton");
 const menuOverlay = document.getElementById("menuOverlay");
-const statusList = document.getElementById("statusList");
+const summaryOverlay = document.getElementById("summaryOverlay");
+const summaryTitle = document.getElementById("summaryTitle");
+const summaryText = document.getElementById("summaryText");
+const summaryStats = document.getElementById("summaryStats");
+const playAgainButton = document.getElementById("playAgainButton");
+const summaryMenuButton = document.getElementById("summaryMenuButton");
 const mapButtons = [...document.querySelectorAll(".map-card")];
 
 const TAU = Math.PI * 2;
@@ -35,6 +40,11 @@ const state = {
   puzzlePenalty: 16,
   currentMap: "plaza",
   mode: "menu",
+  stats: {
+    solvedPuzzles: 0,
+    taggedHiders: 0,
+    roleAtStart: "hider",
+  },
 };
 
 const camera = {
@@ -172,30 +182,20 @@ function hideMenu() {
   menuOverlay.classList.remove("visible");
 }
 
+function showSummary() {
+  summaryOverlay.classList.add("visible");
+}
+
+function hideSummary() {
+  summaryOverlay.classList.remove("visible");
+}
+
 function updateRoleButton() {
   roleButton.textContent = state.controlMode === "seeker" ? "Bestuur: Tikker" : "Bestuur: Verstopper";
 }
 
 function updateStatusPanel() {
-  const living = hiders.filter((hider) => !hider.out).length;
-  const solved = puzzles.filter((puzzle) => puzzle.solved).length;
-  const playerHider = hiders.find((hider) => hider.control === "player");
-  const disguise = playerHider && playerHider.disguisedAs ? playerHider.disguisedAs.kind : "geen";
-  const label = state.mode === "tutorial" ? "Tutorial" : mapConfigs[state.currentMap].name;
-
-  statusList.innerHTML = "";
-  [
-    `Map: ${label}`,
-    `Resterende tijd voor de tikker: ${Math.ceil(state.timeLeft)} sec`,
-    `Actieve verstoppers: ${living}`,
-    `Puzzels opgelost: ${solved}/${puzzles.length}`,
-    `Jouw verstopper-vorm: ${disguise}`,
-    `Modus: ${state.controlMode === "seeker" ? "tikker bestuurt" : "verstopper bestuurt"}`,
-  ].forEach((line) => {
-    const item = document.createElement("li");
-    item.textContent = line;
-    statusList.appendChild(item);
-  });
+  state.stats.solvedPuzzles = puzzles.filter((puzzle) => puzzle.solved).length;
 }
 
 function assignRandomControlRole() {
@@ -213,6 +213,11 @@ function setupRound(config, mode) {
   state.mistCooldown = 0;
   state.running = true;
   state.winner = "";
+  state.stats = {
+    solvedPuzzles: 0,
+    taggedHiders: 0,
+    roleAtStart: "hider",
+  };
   state.seekerShots = [];
   state.mistClouds = [];
   state.particles = [];
@@ -230,6 +235,7 @@ function setupRound(config, mode) {
     state.controlMode = "hider";
     updateRoleButton();
   }
+  state.stats.roleAtStart = drawnRole;
 
   state.message = mode === "tutorial"
     ? "Tutorial: loop met WASD, verander met klik in een voorwerp, druk op E bij een puzzel en gooi met Shift mist als tikker."
@@ -239,6 +245,7 @@ function setupRound(config, mode) {
 
   updateStatusPanel();
   hideMenu();
+  hideSummary();
 }
 
 function startMap(mapId) {
@@ -480,10 +487,49 @@ function tagHidersNear(x, y, radius) {
     if (distance(hider, { x, y }) < radius + hider.radius) {
       hider.out = true;
       hider.disguisedAs = null;
+      state.stats.taggedHiders += 1;
       state.message = `${hider.id} is getikt door de paarse mist.`;
       updateStatusPanel();
     }
   }
+}
+
+function fillSummary() {
+  const mapLabel = state.mode === "tutorial" ? "Tutorial" : mapConfigs[state.currentMap].name;
+  const roleLabel = state.stats.roleAtStart === "seeker" ? "Tikker" : "Verstopper";
+  const remainingHiders = hiders.filter((hider) => !hider.out).length;
+  const roleWon = (state.winner === "tikker" && state.stats.roleAtStart === "seeker") ||
+    (state.winner === "verstoppers" && state.stats.roleAtStart === "hider");
+
+  summaryTitle.textContent = state.mode === "tutorial"
+    ? "Tutorial Klaar"
+    : state.winner === "tikker"
+      ? "De Tikker Wint"
+      : "De Verstoppers Winnen";
+
+  summaryText.textContent = state.mode === "tutorial"
+    ? "Je tutorialronde is afgerond. Je kunt nog een keer oefenen of terug naar het menu."
+    : roleWon
+      ? "Mooie ronde. Jouw gelote rol heeft gewonnen."
+      : "De ronde is klaar. Jouw gelote rol heeft deze keer niet gewonnen.";
+
+  summaryStats.innerHTML = "";
+  [
+    `Map: ${mapLabel}`,
+    `Jouw gelote rol: ${roleLabel}`,
+    `Puzzels opgelost: ${state.stats.solvedPuzzles}/${puzzles.length}`,
+    `Verstoppers getikt door mist: ${state.stats.taggedHiders}`,
+    state.mode === "tutorial"
+      ? `Tutorial status: ${state.stats.solvedPuzzles === puzzles.length ? "alles gehaald" : "nog oefenruimte"}`
+      : `Overgebleven verstoppers: ${remainingHiders}`,
+    state.mode === "tutorial"
+      ? "Tijd speelde hier geen rol."
+      : `Resterende tijd op de klok: ${Math.ceil(state.timeLeft)} sec`,
+  ].forEach((line) => {
+    const item = document.createElement("li");
+    item.textContent = line;
+    summaryStats.appendChild(item);
+  });
 }
 
 function updateShots(dt) {
@@ -539,10 +585,14 @@ function checkWinState() {
     state.running = false;
     state.winner = "tikker";
     state.message = "Alle verstoppers zijn getikt. De tikker wint.";
+    fillSummary();
+    showSummary();
   } else if (state.timeLeft <= 0 && state.running) {
     state.running = false;
     state.winner = "verstoppers";
     state.message = "De tijd is op. De verstoppers winnen.";
+    fillSummary();
+    showSummary();
   }
 }
 
@@ -811,17 +861,6 @@ function drawHud() {
   ctx.fillStyle = "#271b29";
   ctx.font = "18px Georgia";
   ctx.fillText(state.message, 34, canvas.height - 56);
-  if (!state.running && state.mode !== "menu") {
-    ctx.fillStyle = "rgba(35, 24, 37, 0.62)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#fff6ee";
-    ctx.textAlign = "center";
-    ctx.font = "bold 52px Georgia";
-    ctx.fillText(state.winner === "tikker" ? "De tikker wint" : "De verstoppers winnen", canvas.width * 0.5, canvas.height * 0.45);
-    ctx.font = "24px Georgia";
-    ctx.fillText("Open het menu voor een andere map of start opnieuw.", canvas.width * 0.5, canvas.height * 0.53);
-    ctx.textAlign = "left";
-  }
 }
 
 function render() {
@@ -916,10 +955,18 @@ tutorialButton.addEventListener("click", () => {
   state.currentMap = "plaza";
   startTutorial();
 });
+playAgainButton.addEventListener("click", () => {
+  hideSummary();
+  resetRound();
+  state.lastTime = 0;
+});
+summaryMenuButton.addEventListener("click", () => {
+  hideSummary();
+  showMenu();
+});
 mapButtons.forEach((button) => {
   button.addEventListener("click", () => startMap(button.dataset.map));
 });
-
+hideSummary();
 updateRoleButton();
-updateStatusPanel();
 requestAnimationFrame(frame);

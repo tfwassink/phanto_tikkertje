@@ -23,28 +23,21 @@
 
     <section class="game-wrap">
       <canvas id="game" width="1280" height="720" aria-label="Spelcanvas"></canvas>
-      <aside class="sidepanel">
-        <div class="panel-block">
-          <h2>Doel</h2>
-          <p>De tikker gooit korte paarse mist. In de mist zweeft alleen de lichtpaarse glimlach van Phanto.</p>
-        </div>
-        <div class="panel-block">
-          <h2>Controls</h2>
-          <p><strong>Tikker:</strong> WASD lopen, <strong>Shift</strong> om mist te gooien.</p>
-          <p><strong>Verstopper:</strong> WASD lopen, klik op een voorwerp om daarin te veranderen, <strong>E</strong> bij een puzzel.</p>
-        </div>
-        <div class="panel-block">
-          <h2>Regels</h2>
-          <p>Elke puzzel die klaar is trekt tijd af van de jagersklok. Als alle verstoppers getikt zijn wint de tikker.</p>
-          <p>Overleeft er iemand tot de klok op is, dan winnen de verstoppers.</p>
-        </div>
-        <div class="panel-block">
-          <h2>Status</h2>
-          <ul id="statusList" class="status-list"></ul>
-        </div>
-      </aside>
     </section>
   </main>
+
+  <section id="summaryOverlay" class="summary-overlay" aria-label="Eindscherm">
+    <div class="summary-card">
+      <p class="eyebrow">Potje Voorbij</p>
+      <h2 id="summaryTitle">Ronde Klaar</h2>
+      <p id="summaryText" class="menu-copy">Hier zie je straks wie er gewonnen heeft en hoe jij gespeeld hebt.</p>
+      <ul id="summaryStats" class="summary-stats"></ul>
+      <div class="menu-actions">
+        <button id="playAgainButton" type="button">Opnieuw</button>
+        <button id="summaryMenuButton" type="button">Menu</button>
+      </div>
+    </div>
+  </section>
 
   <section id="menuOverlay" class="menu-overlay visible" aria-label="Hoofdmenu">
     <div class="menu-card">
