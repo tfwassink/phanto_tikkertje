@@ -299,6 +299,24 @@ function createCharacter(color, isSeeker = false) {
   head.castShadow = true;
   group.add(head);
 
+  let mask = null;
+  if (isSeeker) {
+    mask = new THREE.Mesh(
+      new THREE.SphereGeometry(1.05, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.62),
+      new THREE.MeshStandardMaterial({
+        color: "#f2a433",
+        roughness: 0.38,
+        metalness: 0.08,
+        emissive: "#6f3b08",
+        emissiveIntensity: 0.18,
+      })
+    );
+    mask.position.set(0, 4.78, 0.28);
+    mask.scale.set(1.06, 1.02, 0.78);
+    mask.castShadow = true;
+    group.add(mask);
+  }
+
   const eyeMaterial = new THREE.MeshStandardMaterial({
     color: isSeeker ? "#d30d18" : "#2a2730",
     emissive: isSeeker ? "#8a0a12" : "#000000",
@@ -306,8 +324,12 @@ function createCharacter(color, isSeeker = false) {
   });
   const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), eyeMaterial);
   const rightEye = leftEye.clone();
-  leftEye.position.set(-0.34, 4.95, 0.74);
-  rightEye.position.set(0.34, 4.95, 0.74);
+  leftEye.position.set(-0.34, 4.95, isSeeker ? 0.98 : 0.74);
+  rightEye.position.set(0.34, 4.95, isSeeker ? 0.98 : 0.74);
+  if (isSeeker) {
+    leftEye.scale.set(1.1, 1.7, 0.9);
+    rightEye.scale.set(1.1, 1.7, 0.9);
+  }
   group.add(leftEye, rightEye);
 
   const smile = new THREE.Mesh(
@@ -318,7 +340,7 @@ function createCharacter(color, isSeeker = false) {
       emissiveIntensity: isSeeker ? 0.4 : 0,
     })
   );
-  smile.position.set(0, 4.4, 0.82);
+  smile.position.set(0, 4.4, isSeeker ? 1.02 : 0.82);
   smile.rotation.z = Math.PI;
   group.add(smile);
 
@@ -330,7 +352,7 @@ function createCharacter(color, isSeeker = false) {
   shadow.receiveShadow = true;
   group.add(shadow);
 
-  group.userData = { body, head, leftEye, rightEye, smile, shadow };
+  group.userData = { body, head, mask, leftEye, rightEye, smile, shadow };
   return group;
 }
 
