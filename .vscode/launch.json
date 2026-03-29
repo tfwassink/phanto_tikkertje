@@ -14,15 +14,6 @@
             "preLaunchTask": "Start local web server"
         },
         {
-            "name": "Launch localhost",
-            "type": "firefox",
-            "request": "launch",
-            "reAttach": true,
-            "url": "http://127.0.0.1:5500/index.html",
-            "webRoot": "${workspaceFolder}",
-            "preLaunchTask": "Start local web server"
-        },
-        {
             "name": "Attach",
             "type": "firefox",
             "request": "attach"
