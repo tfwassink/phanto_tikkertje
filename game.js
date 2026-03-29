@@ -487,14 +487,6 @@ function createCharacter(color, isSeeker = false) {
   if (importedModel) {
     importedModel.position.y = 0.1;
     group.add(importedModel);
-    body.visible = false;
-    head.visible = false;
-    if (mask) {
-      mask.visible = false;
-    }
-    leftEye.visible = false;
-    rightEye.visible = false;
-    smile.visible = false;
   }
 
   group.userData = { body, head, mask, leftEye, rightEye, smile, shadow, importedModel };
