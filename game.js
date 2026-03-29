@@ -666,6 +666,13 @@ function setupRound(config, mode) {
     hiders.push(createHider(index, spawn, color, control));
   }
 
+  if (mode === "tutorial" && hiders[0]) {
+    seeker.mesh.position.copy(hiders[0].mesh.position).add(new THREE.Vector3(10, 0, -8));
+    keepInBounds(seeker.mesh.position);
+    seeker.facing.copy(hiders[0].mesh.position.clone().sub(seeker.mesh.position).setY(0).normalize());
+    seeker.mesh.rotation.y = Math.atan2(seeker.facing.x, seeker.facing.z);
+  }
+
   config.props.forEach((entry, index) => {
     const [x, y, z, kind] = entry;
     const mesh = createPropMesh(kind);
@@ -1159,9 +1166,6 @@ function handlePointer(event) {
 
   const intersections = raycaster.intersectObjects(props.map((prop) => prop.mesh), true);
   if (!intersections.length) {
-    clearDisguise(player);
-    state.message = "Je laat je vermomming los.";
-    updateHud();
     return;
   }
 
