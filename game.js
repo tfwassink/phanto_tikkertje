@@ -52,6 +52,9 @@ const world = {
   depth: 100,
 };
 
+const SEEKER_VIEW_DISTANCE = 32;
+const DISGUISE_STILL_SPEED = 0.02;
+
 const state = {
   currentMap: "plaza",
   mode: "menu",
@@ -561,6 +564,7 @@ function createHider(index, position, color, control) {
     targetPuzzleId: null,
     solving: 0,
     moveMemory: new THREE.Vector3(1, 0, 0),
+    lastMoveAmount: 0,
   };
 }
 
@@ -790,6 +794,9 @@ function resolvePropCollisions(position, radius) {
 
 function moveActor(actor, direction, delta) {
   if (!actor || direction.lengthSq() === 0) {
+    if (actor && "lastMoveAmount" in actor) {
+      actor.lastMoveAmount = 0;
+    }
     return 0;
   }
   tmpVec.copy(direction).multiplyScalar(actor.speed * delta);
@@ -801,7 +808,25 @@ function moveActor(actor, direction, delta) {
     actor.moveMemory.copy(direction);
   }
   actor.mesh.rotation.y = Math.atan2(direction.x, direction.z);
-  return tmpVec.length();
+  const moved = tmpVec.length();
+  if ("lastMoveAmount" in actor) {
+    actor.lastMoveAmount = moved;
+  }
+  return moved;
+}
+
+function hiderVisibleToSeeker(hider) {
+  if (!hider || hider.out) {
+    return false;
+  }
+  const distance = seeker.mesh.position.distanceTo(hider.mesh.position);
+  if (distance > SEEKER_VIEW_DISTANCE) {
+    return false;
+  }
+  if (hider.disguisedAs && hider.lastMoveAmount <= DISGUISE_STILL_SPEED) {
+    return false;
+  }
+  return true;
 }
 
 function burstShot(shot) {
@@ -926,6 +951,7 @@ function updateAiHiders(delta) {
       return;
     }
 
+    hider.lastMoveAmount = 0;
     hider.aiTimer -= delta;
     const nearest = nearestPuzzle(hider);
     const seekerDistance = hider.mesh.position.distanceTo(seeker.mesh.position);
@@ -965,7 +991,7 @@ function updateAiSeeker(delta) {
     return;
   }
   seeker.aiCooldown -= delta;
-  const targets = activeHiders();
+  const targets = activeHiders().filter((hider) => hiderVisibleToSeeker(hider));
   if (!targets.length) {
     return;
   }
