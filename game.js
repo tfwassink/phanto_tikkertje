@@ -489,7 +489,7 @@ function tagHidersNear(x, y, radius) {
       hider.out = true;
       hider.disguisedAs = null;
       state.stats.taggedHiders += 1;
-      state.message = `${hider.id} is getikt door de paarse mist.`;
+      state.message = "Er is iemand getikt door de paarse mist.";
       updateStatusPanel();
     }
   }
@@ -855,7 +855,7 @@ function drawHud() {
   ctx.fillText(`Map: ${state.mode === "tutorial" ? "Leerzone" : mapConfigs[state.currentMap].name}`, 34, 86);
   ctx.fillText(`Bestuurd: ${state.controlMode === "seeker" ? "Tikker" : "Verstopper"}`, 34, 112);
   ctx.textAlign = "right";
-  ctx.fillText(`Verstoppers over: ${hiders.filter((hider) => !hider.out).length}`, canvas.width - 30, 48);
+  ctx.fillText(`Puzzels nog te doen: ${puzzles.length - state.stats.solvedPuzzles}`, canvas.width - 30, 48);
   ctx.textAlign = "left";
   ctx.fillStyle = "rgba(255, 249, 242, 0.9)";
   ctx.fillRect(18, canvas.height - 92, canvas.width - 36, 58);
