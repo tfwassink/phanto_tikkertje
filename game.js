@@ -226,7 +226,7 @@ function tutorialMessage() {
     return "Tutorial stap 3: ga naast een puzzel staan en houd E ingedrukt om hem op te lossen.";
   }
   if (state.tutorial.stage === 3) {
-    return "Tutorial stap 4: druk op Tab om tikker te worden en gooi dan mist met Shift.";
+    return "Tutorial stap 4: je bent nu de tikker, gooi mist met Shift.";
   }
   return "Tutorial klaar. Je kent nu de basis van Phanto Tikkertje.";
 }
@@ -236,6 +236,10 @@ function advanceTutorialStage(nextStage) {
     return;
   }
   state.tutorial.stage = nextStage;
+  if (nextStage === 3) {
+    state.controlMode = "seeker";
+    updateRoleButton();
+  }
   state.message = tutorialMessage();
 }
 
