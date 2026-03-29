@@ -431,8 +431,6 @@ function morphHider(hider, prop) {
     state.tutorial.transformed = true;
     advanceTutorialStage(2);
     state.message = tutorialMessage();
-  } else {
-    state.message = `Verstopper veranderde in ${prop.kind}.`;
   }
   updateStatusPanel();
 }
@@ -447,7 +445,6 @@ function solvePuzzle(hider, puzzle, dt) {
     puzzle.progress = 1;
     if (state.mode !== "tutorial") {
       state.timeLeft = Math.max(18, state.timeLeft - state.puzzlePenalty);
-      state.message = `Puzzel opgelost. De tikker verloor ${state.puzzlePenalty} seconden.`;
     } else {
       state.tutorial.solvedPuzzle = true;
       advanceTutorialStage(3);
@@ -923,7 +920,7 @@ function drawWorld() {
 
 function drawHud() {
   ctx.fillStyle = "rgba(28, 20, 35, 0.68)";
-  ctx.fillRect(18, 18, 450, 118);
+  ctx.fillRect(18, 18, 520, 118);
   ctx.fillStyle = "#fff8ef";
   ctx.font = "bold 34px Georgia";
   ctx.fillText(state.mode === "tutorial" ? "Tutorial" : `Tijd: ${Math.ceil(state.timeLeft)}`, 34, 56);
@@ -931,7 +928,8 @@ function drawHud() {
   ctx.fillText(`Map: ${state.mode === "tutorial" ? "Leerzone" : mapConfigs[state.currentMap].name}`, 34, 86);
   ctx.fillText(`Bestuurd: ${state.controlMode === "seeker" ? "Tikker" : "Verstopper"}`, 34, 112);
   ctx.textAlign = "right";
-  ctx.fillText(`Puzzels nog te doen: ${puzzles.length - state.stats.solvedPuzzles}`, canvas.width - 30, 48);
+  ctx.fillText(`Spelers: ${hiders.length + 1}`, canvas.width - 30, 48);
+  ctx.fillText(`Puzzels nog te doen: ${puzzles.length - state.stats.solvedPuzzles}`, canvas.width - 30, 74);
   ctx.textAlign = "left";
   ctx.fillStyle = "rgba(255, 249, 242, 0.9)";
   ctx.fillRect(18, canvas.height - 92, canvas.width - 36, 58);
