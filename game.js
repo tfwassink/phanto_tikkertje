@@ -106,6 +106,7 @@ const decorativeClouds = [];
 
 const modelAssets = {
   seeker: { path: "assets/models/ghost.glb", desiredHeight: 5.4, rotationY: Math.PI, scene: null, size: null, center: null },
+  seekerMask: { path: "assets/models/mask.glb", desiredHeight: 2.2, rotationY: Math.PI, scene: null, size: null, center: null },
   crate: { path: "assets/models/crate.glb", desiredHeight: 3.6, rotationY: 0, scene: null, size: null, center: null },
   barrel: { path: "assets/models/barrel.glb", desiredHeight: 4.4, rotationY: 0, scene: null, size: null, center: null },
   bush: { path: "assets/models/bush.glb", desiredHeight: 3.1, rotationY: 0, scene: null, size: null, center: null },
@@ -274,6 +275,18 @@ function refreshImportedVisuals() {
       applyDisguise(hider, hider.disguisedAs);
     }
   });
+}
+
+function findPropFromObject(object) {
+  let current = object;
+  while (current) {
+    const match = props.find((prop) => prop.mesh === current);
+    if (match) {
+      return match;
+    }
+    current = current.parent;
+  }
+  return null;
 }
 
 function loadModelAsset(key) {
@@ -483,13 +496,23 @@ function createCharacter(color, isSeeker = false) {
   shadow.receiveShadow = true;
   group.add(shadow);
 
+  const importedMask = isSeeker ? createAssetInstance("seekerMask") : null;
+  if (importedMask) {
+    importedMask.position.set(0, 3.85, 1.08);
+    importedMask.rotation.y += Math.PI;
+    group.add(importedMask);
+    if (mask) {
+      mask.visible = false;
+    }
+  }
+
   const importedModel = isSeeker ? createAssetInstance("seeker") : null;
   if (importedModel) {
     importedModel.position.y = 0.1;
     group.add(importedModel);
   }
 
-  group.userData = { body, head, mask, leftEye, rightEye, smile, shadow, importedModel };
+  group.userData = { body, head, mask, leftEye, rightEye, smile, shadow, importedMask, importedModel };
   return group;
 }
 
@@ -1350,7 +1373,7 @@ function handlePointer(event) {
   }
 
   const hit = intersections[0].object;
-  const propMesh = props.find((prop) => prop.mesh === hit || prop.mesh.children.includes(hit) || prop.mesh.children.some((child) => child === hit.parent));
+  const propMesh = findPropFromObject(hit);
   if (!propMesh) {
     return;
   }
