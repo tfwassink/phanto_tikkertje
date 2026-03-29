@@ -689,10 +689,11 @@ function setupRound(config, mode) {
   }
 
   if (mode === "tutorial" && hiders[0]) {
-    seeker.mesh.position.copy(hiders[0].mesh.position).add(new THREE.Vector3(10, 0, -8));
+    seeker.mesh.position.copy(hiders[0].mesh.position).add(new THREE.Vector3(-8, 0, -6));
     keepInBounds(seeker.mesh.position);
     seeker.facing.copy(hiders[0].mesh.position.clone().sub(seeker.mesh.position).setY(0).normalize());
     seeker.mesh.rotation.y = Math.atan2(seeker.facing.x, seeker.facing.z);
+    seeker.aiCooldown = 0;
   }
 
   config.props.forEach((entry, index) => {
@@ -714,6 +715,7 @@ function setupRound(config, mode) {
   if (mode === "tutorial") {
     state.controlMode = "hider";
     state.stats.roleAtStart = "Verstopper";
+    state.message = "Tutorial stap 1: loop eerst rond met WASD of de pijltjes. De tikker loopt al op de map.";
   } else {
     assignRandomControlRole();
   }
