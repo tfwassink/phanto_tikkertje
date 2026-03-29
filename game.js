@@ -910,10 +910,6 @@ function updatePlayer(delta) {
 
   if (state.controlMode === "hider") {
     const player = getPlayerHider();
-    if (player && player.disguiseMesh) {
-      player.disguiseMesh.rotation.y += delta * 0.6;
-    }
-
     const puzzle = nearestPuzzle(player);
     const closeEnough = puzzle && player.mesh.position.distanceTo(puzzle.mesh.position) < 4.2;
     if (closeEnough && keys.has("e") && (state.mode !== "tutorial" || state.tutorial.stage >= 2)) {
