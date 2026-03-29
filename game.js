@@ -1,4 +1,6 @@
 import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+import { GLTFLoader } from "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js";
+import { clone as cloneSkinned } from "https://unpkg.com/three@0.160.0/examples/jsm/utils/SkeletonUtils.js";
 
 const canvas = document.getElementById("game");
 const restartButton = document.getElementById("restartButton");
@@ -35,12 +37,10 @@ const camera = new THREE.PerspectiveCamera(46, 16 / 9, 0.1, 400);
 const clock = new THREE.Clock();
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
-const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-const groundHit = new THREE.Vector3();
-
 const keys = new Set();
 const tmpVec = new THREE.Vector3();
 const tmpVecB = new THREE.Vector3();
+const gltfLoader = new GLTFLoader();
 
 const worldRoot = new THREE.Group();
 const gameplayRoot = new THREE.Group();
@@ -103,6 +103,15 @@ const shots = [];
 const clouds = [];
 const mountainMeshes = [];
 const decorativeClouds = [];
+
+const modelAssets = {
+  seeker: { path: "assets/models/ghost.glb", desiredHeight: 5.4, rotationY: Math.PI, scene: null, size: null, center: null },
+  crate: { path: "assets/models/crate.glb", desiredHeight: 3.6, rotationY: 0, scene: null, size: null, center: null },
+  barrel: { path: "assets/models/barrel.glb", desiredHeight: 4.4, rotationY: 0, scene: null, size: null, center: null },
+  bush: { path: "assets/models/bush.glb", desiredHeight: 3.1, rotationY: 0, scene: null, size: null, center: null },
+  lamp: { path: "assets/models/lamp.glb", desiredHeight: 6.9, rotationY: 0, scene: null, size: null, center: null },
+  statue: { path: "assets/models/horse-statue.glb", desiredHeight: 5.6, rotationY: Math.PI * 0.2, scene: null, size: null, center: null },
+};
 
 const propTypes = {
   crate: { color: "#9f6c42", accent: "#d8b077", radius: 2.4, scale: [3.5, 3.5, 3.5] },
@@ -187,6 +196,112 @@ function clamp(value, min, max) {
 
 function rand(min, max) {
   return min + Math.random() * (max - min);
+}
+
+function prepareImportedModel(root) {
+  root.traverse((child) => {
+    if (child.isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+      if (child.material) {
+        child.material.side = THREE.FrontSide;
+      }
+    }
+  });
+}
+
+function createAssetInstance(key) {
+  const asset = modelAssets[key];
+  if (!asset || !asset.scene || !asset.size || !asset.center) {
+    return null;
+  }
+
+  const wrapper = new THREE.Group();
+  const model = cloneSkinned(asset.scene);
+  prepareImportedModel(model);
+
+  const scale = asset.desiredHeight / Math.max(asset.size.y, 0.001);
+  model.scale.setScalar(scale);
+  model.rotation.y = asset.rotationY || 0;
+
+  const scaledCenter = asset.center.clone().multiplyScalar(scale);
+  const minY = (asset.center.y - asset.size.y * 0.5) * scale;
+  model.position.set(-scaledCenter.x, -minY, -scaledCenter.z);
+  wrapper.add(model);
+  wrapper.userData.assetKey = key;
+  return wrapper;
+}
+
+function replaceSeekerVisual() {
+  if (!seeker.mesh || !modelAssets.seeker.scene) {
+    return;
+  }
+  const previous = seeker.mesh;
+  const replacement = createCharacter("#7c4a1f", true);
+  replacement.position.copy(previous.position);
+  replacement.rotation.copy(previous.rotation);
+  replacement.visible = previous.visible;
+  gameplayRoot.remove(previous);
+  seeker.mesh = replacement;
+  gameplayRoot.add(replacement);
+}
+
+function replacePropVisuals() {
+  props.forEach((prop) => {
+    if (!modelAssets[prop.kind]?.scene) {
+      return;
+    }
+    const replacement = createPropMesh(prop.kind);
+    replacement.position.copy(prop.mesh.position);
+    replacement.rotation.copy(prop.mesh.rotation);
+    gameplayRoot.remove(prop.mesh);
+    gameplayRoot.add(replacement);
+    prop.mesh = replacement;
+  });
+}
+
+function refreshImportedVisuals() {
+  replaceSeekerVisual();
+  replacePropVisuals();
+
+  hiders.forEach((hider) => {
+    if (hider.disguisedAs) {
+      applyDisguise(hider, hider.disguisedAs);
+    }
+  });
+}
+
+function loadModelAsset(key) {
+  const asset = modelAssets[key];
+  if (!asset) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    gltfLoader.load(
+      asset.path,
+      (gltf) => {
+        const sceneRoot = gltf.scene || gltf.scenes?.[0];
+        if (!sceneRoot) {
+          resolve();
+          return;
+        }
+        prepareImportedModel(sceneRoot);
+        const box = new THREE.Box3().setFromObject(sceneRoot);
+        asset.scene = sceneRoot;
+        asset.size = box.getSize(new THREE.Vector3());
+        asset.center = box.getCenter(new THREE.Vector3());
+        refreshImportedVisuals();
+        resolve();
+      },
+      undefined,
+      () => resolve()
+    );
+  });
+}
+
+function loadModelAssets() {
+  return Promise.all(Object.keys(modelAssets).map((key) => loadModelAsset(key)));
 }
 
 function showMenu() {
@@ -363,11 +478,32 @@ function createCharacter(color, isSeeker = false) {
   shadow.receiveShadow = true;
   group.add(shadow);
 
-  group.userData = { body, head, mask, leftEye, rightEye, smile, shadow };
+  const importedModel = isSeeker ? createAssetInstance("seeker") : null;
+  if (importedModel) {
+    importedModel.position.y = 0.1;
+    group.add(importedModel);
+    body.visible = false;
+    head.visible = false;
+    if (mask) {
+      mask.visible = false;
+    }
+    leftEye.visible = false;
+    rightEye.visible = false;
+    smile.visible = false;
+  }
+
+  group.userData = { body, head, mask, leftEye, rightEye, smile, shadow, importedModel };
   return group;
 }
 
 function createPropMesh(kind) {
+  const importedModel = createAssetInstance(kind);
+  if (importedModel) {
+    importedModel.position.y = 0;
+    importedModel.userData.kind = kind;
+    return importedModel;
+  }
+
   const config = propTypes[kind];
   const group = new THREE.Group();
   let mainMesh;
@@ -1327,4 +1463,5 @@ resizeRenderer();
 createWorldDecor(mapConfigs.plaza);
 updateRoleButton();
 updateHud();
+loadModelAssets();
 requestAnimationFrame(tick);
