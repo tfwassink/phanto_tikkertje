@@ -216,20 +216,25 @@ function createAssetInstance(key) {
     return null;
   }
 
-  const wrapper = new THREE.Group();
-  const model = cloneSkinned(asset.scene);
-  prepareImportedModel(model);
+  try {
+    const wrapper = new THREE.Group();
+    const model = cloneSkinned(asset.scene);
+    prepareImportedModel(model);
 
-  const scale = asset.desiredHeight / Math.max(asset.size.y, 0.001);
-  model.scale.setScalar(scale);
-  model.rotation.y = asset.rotationY || 0;
+    const scale = asset.desiredHeight / Math.max(asset.size.y, 0.001);
+    model.scale.setScalar(scale);
+    model.rotation.y = asset.rotationY || 0;
 
-  const scaledCenter = asset.center.clone().multiplyScalar(scale);
-  const minY = (asset.center.y - asset.size.y * 0.5) * scale;
-  model.position.set(-scaledCenter.x, -minY, -scaledCenter.z);
-  wrapper.add(model);
-  wrapper.userData.assetKey = key;
-  return wrapper;
+    const scaledCenter = asset.center.clone().multiplyScalar(scale);
+    const minY = (asset.center.y - asset.size.y * 0.5) * scale;
+    model.position.set(-scaledCenter.x, -minY, -scaledCenter.z);
+    wrapper.add(model);
+    wrapper.userData.assetKey = key;
+    return wrapper;
+  } catch (error) {
+    console.warn(`Model fallback actief voor ${key}.`, error);
+    return null;
+  }
 }
 
 function replaceSeekerVisual() {
