@@ -498,7 +498,7 @@ function tagHidersNear(x, y, radius) {
 function fillSummary() {
   const mapLabel = state.mode === "tutorial" ? "Tutorial" : mapConfigs[state.currentMap].name;
   const roleLabel = state.stats.roleAtStart === "seeker" ? "Tikker" : "Verstopper";
-  const remainingHiders = hiders.filter((hider) => !hider.out).length;
+  const remainingPuzzles = puzzles.length - state.stats.solvedPuzzles;
   const roleWon = (state.winner === "tikker" && state.stats.roleAtStart === "seeker") ||
     (state.winner === "verstoppers" && state.stats.roleAtStart === "hider");
 
@@ -522,7 +522,7 @@ function fillSummary() {
     `Verstoppers getikt: ${state.stats.taggedHiders}`,
     state.mode === "tutorial"
       ? `Tutorial status: ${state.stats.solvedPuzzles === puzzles.length ? "alles gehaald" : "nog oefenruimte"}`
-      : `Overgebleven verstoppers: ${remainingHiders}`,
+      : `Puzzels nog te doen: ${remainingPuzzles}`,
     state.mode === "tutorial"
       ? "Tijd speelde hier geen rol."
       : `Resterende tijd op de klok: ${Math.ceil(state.timeLeft)} sec`,
