@@ -398,8 +398,9 @@ function updateSeeker(dt) {
   const { dx, dy } = getMovementInput();
   if (state.controlMode === "seeker") {
     moveEntity(seeker, dx, dy, dt);
-    const worldMouse = screenToWorld(mouse.x, mouse.y);
-    seeker.facing = angleTo(seeker, worldMouse);
+    if (dx !== 0 || dy !== 0) {
+      seeker.facing = Math.atan2(dy, dx);
+    }
   }
 }
 
@@ -510,15 +511,15 @@ function fillSummary() {
   summaryText.textContent = state.mode === "tutorial"
     ? "Je tutorialronde is afgerond. Je kunt nog een keer oefenen of terug naar het menu."
     : roleWon
-      ? "Mooie ronde. Jouw gelote rol heeft gewonnen."
-      : "De ronde is klaar. Jouw gelote rol heeft deze keer niet gewonnen.";
+      ? "Mooie ronde. Jouw rol heeft gewonnen."
+      : "De ronde is klaar. Jouw rol heeft deze keer niet gewonnen.";
 
   summaryStats.innerHTML = "";
   [
     `Map: ${mapLabel}`,
-    `Jouw gelote rol: ${roleLabel}`,
+    `Jouw rol: ${roleLabel}`,
     `Puzzels opgelost: ${state.stats.solvedPuzzles}/${puzzles.length}`,
-    `Verstoppers getikt door mist: ${state.stats.taggedHiders}`,
+    `Verstoppers getikt: ${state.stats.taggedHiders}`,
     state.mode === "tutorial"
       ? `Tutorial status: ${state.stats.solvedPuzzles === puzzles.length ? "alles gehaald" : "nog oefenruimte"}`
       : `Overgebleven verstoppers: ${remainingHiders}`,
