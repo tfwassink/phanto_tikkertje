@@ -858,7 +858,8 @@ function nearestPuzzle(actor) {
 }
 
 function controlledActor() {
-  return state.controlMode === "seeker" ? seeker : getPlayerHider();
+  const actor = state.controlMode === "seeker" ? seeker : getPlayerHider();
+  return actor && actor.mesh ? actor : null;
 }
 
 function updatePlayer(delta) {
@@ -1106,6 +1107,9 @@ function updatePuzzles(delta) {
 }
 
 function updateSeekerVisual(delta) {
+  if (!seeker.mesh) {
+    return;
+  }
   seeker.flashTimer = Math.max(0, seeker.flashTimer - delta);
   const smile = seeker.mesh.userData.smile;
   smile.material.emissiveIntensity = 0.4 + Math.sin(state.lastTime * 0.004) * 0.12;
@@ -1113,7 +1117,7 @@ function updateSeekerVisual(delta) {
 
 function updateCamera(delta) {
   const actor = controlledActor();
-  const target = actor ? actor.mesh.position : new THREE.Vector3();
+  const target = actor ? actor.mesh.position : new THREE.Vector3(0, 0, 0);
   const desired = new THREE.Vector3(target.x + 22, 34, target.z + 30);
   camera.position.lerp(desired, 1 - Math.exp(-delta * 3));
   camera.lookAt(target.x, 2.8, target.z);
