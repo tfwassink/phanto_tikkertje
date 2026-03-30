@@ -11,6 +11,7 @@ const modelViewerButton = document.getElementById("modelViewerButton");
 const closeViewerButton = document.getElementById("closeViewerButton");
 const tutorialButton = document.getElementById("tutorialButton");
 const menuOverlay = document.getElementById("menuOverlay");
+const menuCard = document.getElementById("menuCard");
 const modelViewerPanel = document.getElementById("modelViewerPanel");
 const summaryOverlay = document.getElementById("summaryOverlay");
 const summaryTitle = document.getElementById("summaryTitle");
@@ -390,12 +391,16 @@ function showViewerModel(key) {
 
 function openModelViewer(defaultKey = "seeker") {
   state.viewer.active = true;
+  menuOverlay.classList.add("viewer-mode");
+  menuCard.classList.add("viewer-mode");
   modelViewerPanel.classList.add("visible");
   showViewerModel(defaultKey);
 }
 
 function closeModelViewer() {
   state.viewer.active = false;
+  menuOverlay.classList.remove("viewer-mode");
+  menuCard.classList.remove("viewer-mode");
   modelViewerPanel.classList.remove("visible");
   clearViewerModel();
 }

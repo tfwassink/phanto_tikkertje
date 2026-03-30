@@ -191,6 +191,12 @@ button:hover {
   z-index: 5;
 }
 
+.menu-overlay.viewer-mode {
+  place-items: stretch;
+  align-items: center;
+  justify-items: start;
+}
+
 .summary-overlay {
   background: rgba(29, 22, 32, 0.62);
   z-index: 6;
@@ -205,6 +211,13 @@ button:hover {
   width: min(920px, 100%);
   border-radius: 28px;
   padding: 26px;
+}
+
+.menu-card.viewer-mode {
+  width: min(380px, calc(100vw - 32px));
+  margin-left: 18px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
 }
 
 .viewer-panel {
