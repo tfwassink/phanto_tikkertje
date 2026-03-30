@@ -118,7 +118,8 @@ const mountainMeshes = [];
 const decorativeClouds = [];
 
 const modelAssets = {
-  seeker: { path: "assets/models/ghost.glb", desiredHeight: 5.4, rotationY: Math.PI, scene: null, size: null, center: null },
+  seeker: { path: "assets/models/character-animated.glb", desiredHeight: 5.7, rotationY: Math.PI, scene: null, size: null, center: null },
+  hiderHuman: { path: "assets/models/adventurer.glb", desiredHeight: 5.9, rotationY: Math.PI, scene: null, size: null, center: null },
   seekerMask: { path: "assets/models/mask.glb", desiredHeight: 2.2, rotationY: Math.PI, scene: null, size: null, center: null },
   crate: { path: "assets/models/crate.glb", desiredHeight: 3.6, rotationY: 0, scene: null, size: null, center: null },
   barrel: { path: "assets/models/barrel.glb", desiredHeight: 4.4, rotationY: 0, scene: null, size: null, center: null },
@@ -568,6 +569,7 @@ function clearGameplay() {
 function createCharacter(color, isSeeker = false) {
   const group = new THREE.Group();
   group.castShadow = true;
+  const characterModel = createAssetInstance(isSeeker ? "seeker" : "hiderHuman");
 
   const body = new THREE.Mesh(
     new THREE.CapsuleGeometry(1.05, 1.8, 6, 12),
@@ -638,6 +640,16 @@ function createCharacter(color, isSeeker = false) {
   shadow.receiveShadow = true;
   group.add(shadow);
 
+  if (characterModel) {
+    characterModel.position.y = 0.1;
+    group.add(characterModel);
+    body.visible = false;
+    head.visible = false;
+    leftEye.visible = false;
+    rightEye.visible = false;
+    smile.visible = false;
+  }
+
   const importedMask = isSeeker ? createAssetInstance("seekerMask") : null;
   if (importedMask) {
     importedMask.position.set(0, -0.03, 0.58);
@@ -649,13 +661,7 @@ function createCharacter(color, isSeeker = false) {
     }
   }
 
-  const importedModel = isSeeker ? createAssetInstance("seeker") : null;
-  if (importedModel) {
-    importedModel.position.y = 0.1;
-    group.add(importedModel);
-  }
-
-  group.userData = { body, head, mask, leftEye, rightEye, smile, shadow, importedMask, importedModel };
+  group.userData = { body, head, mask, leftEye, rightEye, smile, shadow, importedMask, importedModel: characterModel };
   return group;
 }
 
@@ -875,6 +881,9 @@ function setCharacterVisible(actor, visible) {
   parts.rightEye.visible = visible;
   parts.smile.visible = visible;
   parts.shadow.visible = visible;
+  if (parts.importedModel) {
+    parts.importedModel.visible = visible;
+  }
 }
 
 function clearDisguise(hider) {
