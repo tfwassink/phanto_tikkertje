@@ -254,6 +254,25 @@ function stylizeSeekerMaskModel(root) {
   });
 }
 
+function stylizeHumanModel(root, tint) {
+  root.traverse((child) => {
+    if (!child.isMesh || !child.material) {
+      return;
+    }
+
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    materials.forEach((material) => {
+      if (!material || !("color" in material)) {
+        return;
+      }
+      material.color.lerp(new THREE.Color(tint), 0.22);
+      if ("roughness" in material) {
+        material.roughness = Math.max(0.35, material.roughness * 0.92);
+      }
+    });
+  });
+}
+
 function createAssetInstance(key) {
   const asset = modelAssets[key];
   if (!asset || !asset.scene || !asset.size || !asset.center) {
@@ -266,6 +285,12 @@ function createAssetInstance(key) {
     prepareImportedModel(model);
     if (key === "seekerMask") {
       stylizeSeekerMaskModel(model);
+    }
+    if (key === "seeker") {
+      stylizeHumanModel(model, "#d68f52");
+    }
+    if (key === "hiderHuman") {
+      stylizeHumanModel(model, "#8ab4e8");
     }
 
     const scale = asset.desiredHeight / Math.max(asset.size.y, 0.001);
@@ -641,7 +666,8 @@ function createCharacter(color, isSeeker = false) {
   group.add(shadow);
 
   if (characterModel) {
-    characterModel.position.y = 0.1;
+    characterModel.position.set(0, 0.08, 0.14);
+    characterModel.scale.multiplyScalar(isSeeker ? 1.04 : 1.08);
     group.add(characterModel);
     body.visible = false;
     head.visible = false;
@@ -652,10 +678,10 @@ function createCharacter(color, isSeeker = false) {
 
   const importedMask = isSeeker ? createAssetInstance("seekerMask") : null;
   if (importedMask) {
-    importedMask.position.set(0, -0.03, 0.58);
+    importedMask.position.set(0, 4.62, 0.46);
     importedMask.rotation.y += Math.PI;
-    importedMask.scale.multiplyScalar(0.66);
-    head.add(importedMask);
+    importedMask.scale.multiplyScalar(0.62);
+    group.add(importedMask);
     if (mask) {
       mask.visible = false;
     }
