@@ -126,6 +126,7 @@ const shots = [];
 const clouds = [];
 const mountainMeshes = [];
 const decorativeClouds = [];
+const villaDoors = [];
 
 const modelAssets = {
   seeker: { path: "assets/models/character-animated.glb", desiredHeight: 5.7, rotationY: Math.PI, scene: null, size: null, center: null },
@@ -206,6 +207,9 @@ const mapConfigs = {
       [-16, 0, -2, "crate"], [16, 0, -2, "crate"], [-8, 0, 8, "barrel"], [8, 0, 8, "barrel"],
       [-18, 0, 13, "lamp"], [18, 0, 13, "lamp"], [-8, 0, -15, "statue"], [8, 0, -15, "statue"],
       [-28, 0, 8, "crate"], [28, 0, 8, "crate"], [0, 0, 18, "statue"], [0, 0, -18, "statue"],
+      [-20, 0, -8, "crate"], [-12, 0, -8, "lamp"], [-4, 0, -8, "barrel"], [4, 0, -8, "barrel"],
+      [12, 0, -8, "lamp"], [20, 0, -8, "crate"], [-18, 0, 4, "bush"], [-8, 0, 4, "crate"],
+      [8, 0, 4, "crate"], [18, 0, 4, "bush"], [-14, 0, 11, "barrel"], [0, 0, 11, "statue"], [14, 0, 11, "barrel"],
     ],
     puzzles: [
       [-34, 0, -24],
@@ -881,22 +885,52 @@ function createFountain(scale = 1) {
 
 function createVillaStructure() {
   const group = new THREE.Group();
+  const shellMaterial = new THREE.MeshStandardMaterial({ color: "#e5dbc8", roughness: 0.84 });
+  const upperMaterial = new THREE.MeshStandardMaterial({ color: "#efe6d6", roughness: 0.8 });
 
-  const base = new THREE.Mesh(
-    new THREE.BoxGeometry(68, 12, 34),
-    new THREE.MeshStandardMaterial({ color: "#e5dbc8", roughness: 0.84 })
-  );
-  base.position.set(0, 6, -4);
-  base.castShadow = true;
-  base.receiveShadow = true;
+  const frontLeft = new THREE.Mesh(new THREE.BoxGeometry(28, 12, 2), shellMaterial);
+  frontLeft.position.set(-20, 6, 12.9);
+  frontLeft.castShadow = true;
+  frontLeft.receiveShadow = true;
 
-  const upper = new THREE.Mesh(
-    new THREE.BoxGeometry(34, 10, 20),
-    new THREE.MeshStandardMaterial({ color: "#efe6d6", roughness: 0.8 })
-  );
-  upper.position.set(0, 17, -6);
-  upper.castShadow = true;
-  upper.receiveShadow = true;
+  const frontRight = frontLeft.clone();
+  frontRight.position.x = 20;
+
+  const backWall = new THREE.Mesh(new THREE.BoxGeometry(68, 12, 2), shellMaterial);
+  backWall.position.set(0, 6, -20.9);
+  backWall.castShadow = true;
+  backWall.receiveShadow = true;
+
+  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(2, 12, 34), shellMaterial);
+  leftWall.position.set(-33, 6, -4);
+  leftWall.castShadow = true;
+  leftWall.receiveShadow = true;
+
+  const rightWall = leftWall.clone();
+  rightWall.position.x = 33;
+
+  const upperFront = new THREE.Mesh(new THREE.BoxGeometry(34, 10, 2), upperMaterial);
+  upperFront.position.set(0, 17, 3.9);
+  upperFront.castShadow = true;
+  upperFront.receiveShadow = true;
+
+  const upperBack = new THREE.Mesh(new THREE.BoxGeometry(34, 10, 2), upperMaterial);
+  upperBack.position.set(0, 17, -15.9);
+  upperBack.castShadow = true;
+  upperBack.receiveShadow = true;
+
+  const upperLeft = new THREE.Mesh(new THREE.BoxGeometry(2, 10, 20), upperMaterial);
+  upperLeft.position.set(-16, 17, -6);
+  upperLeft.castShadow = true;
+  upperLeft.receiveShadow = true;
+
+  const upperRight = upperLeft.clone();
+  upperRight.position.x = 16;
+
+  const upperCore = new THREE.Mesh(new THREE.BoxGeometry(30, 10, 16), upperMaterial);
+  upperCore.position.set(0, 17, -6);
+  upperCore.castShadow = true;
+  upperCore.receiveShadow = true;
 
   const roofMain = new THREE.Mesh(
     new THREE.ConeGeometry(29, 11, 4),
@@ -925,14 +959,60 @@ function createVillaStructure() {
   terrace.position.set(0, 0.25, 18);
   terrace.receiveShadow = true;
 
-  const door = new THREE.Mesh(
-    new THREE.BoxGeometry(7, 9, 0.8),
-    new THREE.MeshStandardMaterial({ color: "#75472b", roughness: 0.6 })
+  const ceiling = new THREE.Mesh(
+    new THREE.BoxGeometry(58, 0.45, 24),
+    new THREE.MeshStandardMaterial({ color: "#f3ecdf", roughness: 0.9 })
   );
-  door.position.set(0, 4.5, 12.8);
-  door.castShadow = true;
+  ceiling.position.set(0, 11.7, -2);
+  ceiling.receiveShadow = true;
 
-  group.add(base, upper, roofMain, roofUpper, floor, terrace, door);
+  const stairHall = new THREE.Mesh(
+    new THREE.BoxGeometry(12, 6, 10),
+    new THREE.MeshStandardMaterial({ color: "#ddd1bb", roughness: 0.88, transparent: true, opacity: 0.92 })
+  );
+  stairHall.position.set(0, 3, -8);
+  stairHall.receiveShadow = true;
+
+  const leftDoorPivot = new THREE.Group();
+  leftDoorPivot.position.set(-0.2, 0, 12.6);
+  const leftDoor = new THREE.Mesh(
+    new THREE.BoxGeometry(3.4, 8.8, 0.38),
+    new THREE.MeshStandardMaterial({ color: "#76482c", roughness: 0.58 })
+  );
+  leftDoor.position.set(-1.7, 4.4, 0);
+  leftDoor.castShadow = true;
+  leftDoorPivot.add(leftDoor);
+
+  const rightDoorPivot = new THREE.Group();
+  rightDoorPivot.position.set(0.2, 0, 12.6);
+  const rightDoor = new THREE.Mesh(
+    new THREE.BoxGeometry(3.4, 8.8, 0.38),
+    new THREE.MeshStandardMaterial({ color: "#76482c", roughness: 0.58 })
+  );
+  rightDoor.position.set(1.7, 4.4, 0);
+  rightDoor.castShadow = true;
+  rightDoorPivot.add(rightDoor);
+
+  group.add(
+    frontLeft,
+    frontRight,
+    backWall,
+    leftWall,
+    rightWall,
+    upperFront,
+    upperBack,
+    upperLeft,
+    upperRight,
+    upperCore,
+    roofMain,
+    roofUpper,
+    floor,
+    terrace,
+    ceiling,
+    stairHall,
+    leftDoorPivot,
+    rightDoorPivot
+  );
 
   for (let x = -24; x <= 24; x += 12) {
     const windowFrame = new THREE.Mesh(
@@ -962,8 +1042,13 @@ function createVillaStructure() {
     wing.position.set(x, 4.5, 0);
     wing.castShadow = true;
     wing.receiveShadow = true;
-    group.add(wing);
+      group.add(wing);
   }
+
+  group.userData.doors = [
+    { pivot: leftDoorPivot, closed: 0, open: -Math.PI * 0.5, trigger: new THREE.Vector3(-2.2, 0, 15.5), current: 0 },
+    { pivot: rightDoorPivot, closed: 0, open: Math.PI * 0.5, trigger: new THREE.Vector3(2.2, 0, 15.5), current: 0 },
+  ];
 
   return group;
 }
@@ -1134,6 +1219,7 @@ function createWorldDecor(config) {
   mapPreviewRoot.clear();
   mountainMeshes.length = 0;
   decorativeClouds.length = 0;
+  villaDoors.length = 0;
 
   const ambient = new THREE.HemisphereLight("#fff5d9", "#8f7757", 1.25);
   const sun = new THREE.DirectionalLight("#fff3c4", 1.8);
@@ -1191,6 +1277,9 @@ function createWorldDecor(config) {
   if (config.name.includes("Misttuin")) {
     const villa = createVillaStructure();
     worldRoot.add(villa);
+    if (villa.userData.doors) {
+      villaDoors.push(...villa.userData.doors);
+    }
 
     const frontFountain = createFountain(1.05);
     frontFountain.position.set(0, 0, 31);
@@ -1891,6 +1980,13 @@ function updateDecor(delta) {
   });
   mountainMeshes.forEach((mountain, index) => {
     mountain.rotation.y += delta * 0.03 * (index % 2 === 0 ? 1 : -1);
+  });
+  villaDoors.forEach((door) => {
+    const actors = [seeker, ...hiders].filter((actor) => actor?.mesh && actor.mesh.visible && !actor.out);
+    const shouldOpen = actors.some((actor) => actor.mesh.position.distanceToSquared(door.trigger) < 30);
+    const target = shouldOpen ? door.open : door.closed;
+    door.current = THREE.MathUtils.lerp(door.current, target, 1 - Math.exp(-delta * 8));
+    door.pivot.rotation.y = door.current;
   });
 }
 
