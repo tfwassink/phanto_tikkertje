@@ -133,6 +133,11 @@ const modelAssets = {
   hiderHuman: { path: "assets/models/adventurer.glb", desiredHeight: 5.9, rotationY: Math.PI, scene: null, size: null, center: null },
   seekerMask: { path: "assets/models/mask.glb", desiredHeight: 2.2, rotationY: Math.PI, scene: null, size: null, center: null },
   villaHouse: { path: "assets/models/villa-house.glb", desiredHeight: 28, rotationY: Math.PI, scene: null, size: null, center: null },
+  forestNature: { path: "assets/models/forest-nature.glb", desiredHeight: 20, rotationY: 0, scene: null, size: null, center: null },
+  forestWalk: { path: "assets/models/forest-walk.glb", desiredHeight: 16, rotationY: 0, scene: null, size: null, center: null },
+  forestPond: { path: "assets/models/forest-pond.glb", desiredHeight: 10, rotationY: 0, scene: null, size: null, center: null },
+  forestBlock: { path: "assets/models/forest-block.glb", desiredHeight: 12, rotationY: 0, scene: null, size: null, center: null },
+  fallTree: { path: "assets/models/fall-tree.glb", desiredHeight: 14, rotationY: 0, scene: null, size: null, center: null },
   crate: { path: "assets/models/crate.glb", desiredHeight: 3.6, rotationY: 0, scene: null, size: null, center: null },
   barrel: { path: "assets/models/barrel.glb", desiredHeight: 4.4, rotationY: 0, scene: null, size: null, center: null },
   bush: { path: "assets/models/bush.glb", desiredHeight: 3.1, rotationY: 0, scene: null, size: null, center: null },
@@ -146,6 +151,11 @@ const propTypes = {
   bush: { color: "#699342", accent: "#9bd061", radius: 2.7, scale: [4.2, 3.2, 4.2] },
   lamp: { color: "#57506b", accent: "#f2cf67", radius: 1.9, scale: [1.3, 6.8, 1.3] },
   statue: { color: "#7f7d86", accent: "#c7c9d5", radius: 2.1, scale: [2.2, 5.8, 2.2] },
+  forestNature: { color: "#6c8b50", accent: "#8ead68", radius: 4.8, scale: [8.5, 8.5, 8.5] },
+  forestWalk: { color: "#719156", accent: "#3e5034", radius: 4.4, scale: [8.2, 8.2, 8.2] },
+  forestPond: { color: "#5ea8d6", accent: "#7dcaf3", radius: 4.9, scale: [8.4, 3.2, 8.4] },
+  forestBlock: { color: "#65804a", accent: "#8fb26f", radius: 4.6, scale: [7.8, 7.8, 7.8] },
+  fallTree: { color: "#9f5f29", accent: "#d98b37", radius: 3.3, scale: [5.8, 10.5, 5.8] },
 };
 
 const mapConfigs = {
@@ -182,42 +192,33 @@ const mapConfigs = {
     ],
   },
   garden: {
-    name: "Misttuin Villa",
-    sky: "#d8e3cb",
-    fog: "#dbe6d2",
-    groundA: "#a8c78f",
-    groundB: "#d5c5a4",
-    mountain: "#698061",
+    name: "Mistbos",
+    sky: "#d4e2d3",
+    fog: "#cbdcc7",
+    groundA: "#7d9a62",
+    groundB: "#5f764c",
+    mountain: "#4f6444",
     timeLimit: 165,
     puzzlePenalty: 14,
-    seekerSpawn: [0, 0, 30],
+    seekerSpawn: [0, 0, 34],
     hiderSpawns: [
-      [-28, 0, -34],
-      [28, 0, -34],
-      [0, 0, 6],
+      [-34, 0, -28],
+      [34, 0, -24],
+      [0, 0, -34],
     ],
     props: [
-      [-45, 0, -38, "bush"], [-36, 0, -34, "bush"], [-27, 0, -39, "lamp"], [-15, 0, -38, "bush"],
-      [15, 0, -38, "bush"], [27, 0, -39, "lamp"], [36, 0, -34, "bush"], [45, 0, -38, "bush"],
-      [-50, 0, -18, "bush"], [-36, 0, -14, "crate"], [-24, 0, -14, "barrel"], [-14, 0, -16, "bush"],
-      [14, 0, -16, "bush"], [24, 0, -14, "barrel"], [36, 0, -14, "crate"], [50, 0, -18, "bush"],
-      [-44, 0, 0, "lamp"], [-34, 0, 0, "crate"], [-23, 0, 0, "barrel"], [-12, 0, 0, "statue"],
-      [12, 0, 0, "statue"], [23, 0, 0, "barrel"], [34, 0, 0, "crate"], [44, 0, 0, "lamp"],
-      [-42, 0, 18, "bush"], [-28, 0, 18, "crate"], [-14, 0, 18, "barrel"], [14, 0, 18, "barrel"],
-      [28, 0, 18, "crate"], [42, 0, 18, "bush"], [-18, 0, 33, "bush"], [18, 0, 33, "bush"],
-      [-16, 0, -2, "crate"], [16, 0, -2, "crate"], [-8, 0, 8, "barrel"], [8, 0, 8, "barrel"],
-      [-18, 0, 13, "lamp"], [18, 0, 13, "lamp"], [-8, 0, -15, "statue"], [8, 0, -15, "statue"],
-      [-28, 0, 8, "crate"], [28, 0, 8, "crate"], [0, 0, 18, "statue"], [0, 0, -18, "statue"],
-      [-20, 0, -8, "crate"], [-12, 0, -8, "lamp"], [-4, 0, -8, "barrel"], [4, 0, -8, "barrel"],
-      [12, 0, -8, "lamp"], [20, 0, -8, "crate"], [-18, 0, 4, "bush"], [-8, 0, 4, "crate"],
-      [8, 0, 4, "crate"], [18, 0, 4, "bush"], [-14, 0, 11, "barrel"], [0, 0, 11, "statue"], [14, 0, 11, "barrel"],
+      [-48, 0, -32, "forestNature"], [-30, 0, -34, "fallTree"], [-8, 0, -34, "forestBlock"], [15, 0, -34, "forestNature"],
+      [40, 0, -31, "fallTree"], [-52, 0, -10, "forestBlock"], [-30, 0, -10, "forestWalk"], [-6, 0, -11, "forestNature"],
+      [22, 0, -9, "fallTree"], [46, 0, -8, "forestBlock"], [-46, 0, 10, "forestNature"], [-18, 0, 9, "forestPond"],
+      [12, 0, 10, "forestWalk"], [38, 0, 12, "forestNature"], [-38, 0, 32, "fallTree"], [-14, 0, 33, "forestBlock"],
+      [11, 0, 32, "forestNature"], [37, 0, 34, "fallTree"], [0, 0, -24, "forestPond"], [0, 0, 24, "forestPond"],
     ],
     puzzles: [
-      [-34, 0, -24],
-      [34, 0, -24],
-      [0, 0, -8],
-      [-18, 0, 14],
-      [18, 0, 14],
+      [-30, 0, -18],
+      [30, 0, -14],
+      [0, 0, 0],
+      [-20, 0, 22],
+      [22, 0, 24],
     ],
   },
 };
@@ -838,6 +839,36 @@ function createPropMesh(kind) {
     lantern.position.y = config.scale[1] + 0.25;
     group.add(pole, lantern);
     mainMesh = pole;
+  } else if (kind === "forestPond") {
+    mainMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(config.scale[0] * 0.48, config.scale[2] * 0.52, config.scale[1], 26),
+      new THREE.MeshStandardMaterial({ color: config.color, emissive: config.accent, emissiveIntensity: 0.15, transparent: true, opacity: 0.88 })
+    );
+  } else if (kind === "fallTree") {
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.45, 0.65, config.scale[1], 12),
+      new THREE.MeshStandardMaterial({ color: "#6f4a2e", roughness: 0.92 })
+    );
+    trunk.position.y = config.scale[1] * 0.5;
+    const leaves = new THREE.Mesh(
+      new THREE.ConeGeometry(config.scale[0] * 0.45, config.scale[1] * 0.78, 12),
+      new THREE.MeshStandardMaterial({ color: config.accent, roughness: 1 })
+    );
+    leaves.position.y = config.scale[1] + 1.8;
+    group.add(trunk, leaves);
+    mainMesh = trunk;
+  } else if (kind === "forestNature" || kind === "forestWalk" || kind === "forestBlock") {
+    mainMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(config.scale[0] * 0.42, config.scale[2] * 0.48, config.scale[1], 10),
+      new THREE.MeshStandardMaterial({ color: config.color, roughness: 0.96 })
+    );
+    mainMesh.position.y = config.scale[1] * 0.5;
+    const topper = new THREE.Mesh(
+      new THREE.ConeGeometry(config.scale[0] * 0.5, config.scale[1] * 0.8, 10),
+      new THREE.MeshStandardMaterial({ color: config.accent, roughness: 1 })
+    );
+    topper.position.y = config.scale[1] * 1.05;
+    group.add(topper);
   } else {
     mainMesh = new THREE.Mesh(
       new THREE.CylinderGeometry(config.scale[0] * 0.6, config.scale[0] * 0.7, config.scale[1], 12),
@@ -1319,56 +1350,35 @@ function createWorldDecor(config) {
     decorativeClouds.push(cloud);
   }
 
-  if (config.name.includes("Misttuin")) {
-    const importedVilla = createImportedVillaExterior();
-    if (importedVilla) {
-      worldRoot.add(importedVilla);
-    }
+  if (config.name.includes("Mistbos")) {
+    const placements = [
+      ["forestNature", -42, -24, 0.88],
+      ["forestWalk", -12, -12, 0.8],
+      ["forestBlock", 22, -18, 0.82],
+      ["forestNature", 42, 4, 0.86],
+      ["forestPond", 0, 20, 0.78],
+      ["fallTree", -28, 26, 1],
+      ["fallTree", 28, 26, 1],
+      ["forestBlock", 0, -36, 0.9],
+    ];
 
-    const villa = createVillaStructure();
-    worldRoot.add(villa);
-    if (villa.userData.doors) {
-      villaDoors.push(...villa.userData.doors);
-    }
+    placements.forEach(([kind, x, z, scale]) => {
+      const asset = createAssetInstance(kind);
+      if (!asset) {
+        return;
+      }
+      asset.position.set(x, 0, z);
+      asset.scale.multiplyScalar(scale);
+      worldRoot.add(asset);
+    });
 
-    const frontFountain = createFountain(1.05);
-    frontFountain.position.set(0, 0, 31);
-    worldRoot.add(frontFountain);
-
-    const sideFountainLeft = createFountain(0.72);
-    sideFountainLeft.position.set(-32, 0, 27);
-    worldRoot.add(sideFountainLeft);
-
-    const sideFountainRight = createFountain(0.72);
-    sideFountainRight.position.set(32, 0, 27);
-    worldRoot.add(sideFountainRight);
-
-    const path = new THREE.Mesh(
-      new THREE.PlaneGeometry(22, 46),
-      new THREE.MeshStandardMaterial({ color: "#d7c1a0", roughness: 0.92 })
+    const forestPath = new THREE.Mesh(
+      new THREE.PlaneGeometry(18, 70),
+      new THREE.MeshStandardMaterial({ color: "#8b7855", roughness: 0.94, transparent: true, opacity: 0.74 })
     );
-    path.rotation.x = -Math.PI / 2;
-    path.position.set(0, 0.04, 22);
-    worldRoot.add(path);
-
-    for (const x of [-42, -34, -26, 26, 34, 42]) {
-      const hedge = createHedge(5.4, 4.2, 3);
-      hedge.position.x = x;
-      hedge.position.z = 30;
-      worldRoot.add(hedge);
-    }
-
-    const hedgeBack = createHedge(56, 4.4, 3.2);
-    hedgeBack.position.set(0, 0, -28);
-    worldRoot.add(hedgeBack);
-
-    const hedgeLeft = createHedge(4, 52, 3.2);
-    hedgeLeft.position.set(-50, 0, 2);
-    worldRoot.add(hedgeLeft);
-
-    const hedgeRight = createHedge(4, 52, 3.2);
-    hedgeRight.position.set(50, 0, 2);
-    worldRoot.add(hedgeRight);
+    forestPath.rotation.x = -Math.PI / 2;
+    forestPath.position.set(0, 0.03, 0);
+    worldRoot.add(forestPath);
   }
 }
 
@@ -1398,28 +1408,16 @@ function createMapPreview(mapKey) {
   group.add(accent);
 
   if (mapKey === "garden") {
-    const importedVilla = createImportedVillaExterior();
-    if (importedVilla) {
-      importedVilla.scale.multiplyScalar(0.34);
-      importedVilla.position.set(0, 0.9, -2);
-      group.add(importedVilla);
-    } else {
-      const villa = createVillaStructure();
-      villa.scale.setScalar(0.34);
-      villa.position.y = 0.9;
-      villa.position.z = -2;
-      group.add(villa);
-    }
-
-    const fountain = createFountain(0.32);
-    fountain.position.set(0, 0.95, 10);
-    group.add(fountain);
-
-    for (const x of [-14, -9, 9, 14]) {
-      const hedge = createHedge(4.2, 3, 2.2);
-      hedge.position.set(x, 0.95, 12);
-      group.add(hedge);
-    }
+    [["forestNature", -10, -6, 0.18], ["forestWalk", 8, -1, 0.17], ["forestPond", 0, 11, 0.16], ["fallTree", 12, 11, 0.22]]
+      .forEach(([kind, x, z, scale]) => {
+        const asset = createAssetInstance(kind);
+        if (!asset) {
+          return;
+        }
+        asset.scale.multiplyScalar(scale);
+        asset.position.set(x, 0.95, z);
+        group.add(asset);
+      });
   } else {
     for (const [x, , z, kind] of config.props.slice(0, 8)) {
       const prop = createPropMesh(kind);

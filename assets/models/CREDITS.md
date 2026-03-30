@@ -22,3 +22,13 @@ Deze modellen zijn gebruikt om `Phanto Tikkertje` mooier te maken.
   - https://poly.pizza/m/ZwF0K7WBmu
 - `villa-house.glb`: Modern House by KJ via Get3DModels, CC Attribution
   - https://www.get3dmodels.com/architecture/modern-house-model/
+- `forest-nature.glb`: Nature by 3Donimus via Poly Pizza
+  - https://poly.pizza/m/0nsE2b8uXZy
+- `forest-walk.glb`: Walk in the Woods by Don Carson via Poly Pizza
+  - https://poly.pizza/m/38m6Q1H12DU
+- `forest-pond.glb`: Pond by Poly by Google via Poly Pizza
+  - https://poly.pizza/m/5rf3YuZfJAW
+- `forest-block.glb`: Forest Block by Jarlan Perez via Poly Pizza
+  - https://poly.pizza/m/64iwya-59ew
+- `fall-tree.glb`: Fall Tree by Danni Bittman via Poly Pizza
+  - https://poly.pizza/m/4GYen9Xm3Kj
