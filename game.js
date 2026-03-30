@@ -129,8 +129,8 @@ const decorativeClouds = [];
 const villaDoors = [];
 
 const modelAssets = {
-  seeker: { path: "assets/models/character-animated.glb", desiredHeight: 5.7, rotationY: Math.PI, scene: null, size: null, center: null },
-  hiderHuman: { path: "assets/models/adventurer.glb", desiredHeight: 5.9, rotationY: Math.PI, scene: null, size: null, center: null },
+  seeker: { path: "assets/models/character-animated.glb", desiredHeight: 5.7, rotationY: 0, scene: null, size: null, center: null },
+  hiderHuman: { path: "assets/models/adventurer.glb", desiredHeight: 5.9, rotationY: 0, scene: null, size: null, center: null },
   seekerMask: { path: "assets/models/mask.glb", desiredHeight: 2.2, rotationY: Math.PI, scene: null, size: null, center: null },
   villaHouse: { path: "assets/models/villa-house.glb", desiredHeight: 28, rotationY: Math.PI, scene: null, size: null, center: null },
   forestNature: { path: "assets/models/forest-nature.glb", desiredHeight: 20, rotationY: 0, scene: null, size: null, center: null },
