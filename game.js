@@ -132,6 +132,7 @@ const modelAssets = {
   seeker: { path: "assets/models/character-animated.glb", desiredHeight: 5.7, rotationY: Math.PI, scene: null, size: null, center: null },
   hiderHuman: { path: "assets/models/adventurer.glb", desiredHeight: 5.9, rotationY: Math.PI, scene: null, size: null, center: null },
   seekerMask: { path: "assets/models/mask.glb", desiredHeight: 2.2, rotationY: Math.PI, scene: null, size: null, center: null },
+  villaHouse: { path: "assets/models/villa-house.glb", desiredHeight: 28, rotationY: Math.PI, scene: null, size: null, center: null },
   crate: { path: "assets/models/crate.glb", desiredHeight: 3.6, rotationY: 0, scene: null, size: null, center: null },
   barrel: { path: "assets/models/barrel.glb", desiredHeight: 4.4, rotationY: 0, scene: null, size: null, center: null },
   bush: { path: "assets/models/bush.glb", desiredHeight: 3.1, rotationY: 0, scene: null, size: null, center: null },
@@ -289,6 +290,24 @@ function stylizeHumanModel(root, tint) {
   });
 }
 
+function stylizeVillaModel(root) {
+  root.traverse((child) => {
+    if (!child.isMesh || !child.material) {
+      return;
+    }
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    materials.forEach((material) => {
+      if (!material || !("color" in material)) {
+        return;
+      }
+      material.color.lerp(new THREE.Color("#efe2cf"), 0.26);
+      if ("roughness" in material) {
+        material.roughness = clamp((material.roughness || 0.8) * 1.05, 0.35, 1);
+      }
+    });
+  });
+}
+
 function getRenderableBounds(root) {
   const bounds = new THREE.Box3();
   let foundMesh = false;
@@ -338,6 +357,9 @@ function createAssetInstance(key) {
     }
     if (key === "hiderHuman") {
       stylizeHumanModel(model, "#8ab4e8");
+    }
+    if (key === "villaHouse") {
+      stylizeVillaModel(model);
     }
 
     const scale = asset.desiredHeight / Math.max(asset.size.y, 0.001);
@@ -394,8 +416,15 @@ function refreshImportedVisuals() {
     }
   });
 
-  if (state.viewer.active) {
+  if (state.viewer.active && state.viewer.mode === "model") {
     showViewerModel(state.viewer.currentModel);
+  }
+  if (state.viewer.active && state.viewer.mode === "map") {
+    showMapPreview(state.selectedMap);
+  }
+  if (state.currentMap === "garden" || state.mapName.includes("Misttuin")) {
+    const config = mapConfigs[state.currentMap] || mapConfigs.garden;
+    createWorldDecor(config);
   }
 }
 
@@ -1053,6 +1082,22 @@ function createVillaStructure() {
   return group;
 }
 
+function createImportedVillaExterior() {
+  const importedVilla = createAssetInstance("villaHouse");
+  if (!importedVilla) {
+    return null;
+  }
+  importedVilla.position.set(0, 0, -4);
+  importedVilla.scale.multiplyScalar(1.18);
+  importedVilla.traverse((child) => {
+    if (child.isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  return importedVilla;
+}
+
 function createPuzzle(position, index) {
   const group = new THREE.Group();
   const base = new THREE.Mesh(
@@ -1275,6 +1320,11 @@ function createWorldDecor(config) {
   }
 
   if (config.name.includes("Misttuin")) {
+    const importedVilla = createImportedVillaExterior();
+    if (importedVilla) {
+      worldRoot.add(importedVilla);
+    }
+
     const villa = createVillaStructure();
     worldRoot.add(villa);
     if (villa.userData.doors) {
@@ -1348,11 +1398,18 @@ function createMapPreview(mapKey) {
   group.add(accent);
 
   if (mapKey === "garden") {
-    const villa = createVillaStructure();
-    villa.scale.setScalar(0.34);
-    villa.position.y = 0.9;
-    villa.position.z = -2;
-    group.add(villa);
+    const importedVilla = createImportedVillaExterior();
+    if (importedVilla) {
+      importedVilla.scale.multiplyScalar(0.34);
+      importedVilla.position.set(0, 0.9, -2);
+      group.add(importedVilla);
+    } else {
+      const villa = createVillaStructure();
+      villa.scale.setScalar(0.34);
+      villa.position.y = 0.9;
+      villa.position.z = -2;
+      group.add(villa);
+    }
 
     const fountain = createFountain(0.32);
     fountain.position.set(0, 0.95, 10);

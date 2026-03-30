@@ -20,3 +20,5 @@ Deze modellen zijn gebruikt om `Phanto Tikkertje` mooier te maken.
   - https://poly.pizza/m/DgOCW9ZCRJ
 - `adventurer.glb`: Adventurer by Quaternius via Poly Pizza, CC0
   - https://poly.pizza/m/ZwF0K7WBmu
+- `villa-house.glb`: Modern House by KJ via Get3DModels, CC Attribution
+  - https://www.get3dmodels.com/architecture/modern-house-model/
