@@ -347,7 +347,13 @@ function createSeekerMaskFallback() {
   const group = new THREE.Group();
   const shell = new THREE.Mesh(
     new THREE.SphereGeometry(1.15, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.62),
-    new THREE.MeshStandardMaterial({ color: "#f2a433", roughness: 0.38, metalness: 0.08 })
+    new THREE.MeshStandardMaterial({
+      color: "#e0b43a",
+      roughness: 0.24,
+      metalness: 0.72,
+      emissive: "#6b4c06",
+      emissiveIntensity: 0.18,
+    })
   );
   shell.scale.set(1.05, 1.02, 0.82);
   shell.castShadow = true;
@@ -366,7 +372,7 @@ function createViewerModel(key) {
     return createCharacter("#7c4a1f", true);
   }
   if (key === "seekerMask") {
-    return createAssetInstance("seekerMask") || createSeekerMaskFallback();
+    return createSeekerMaskFallback();
   }
   return createPropMesh(key);
 }
@@ -552,10 +558,10 @@ function createCharacter(color, isSeeker = false) {
     mask = new THREE.Mesh(
       new THREE.SphereGeometry(1.05, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.62),
       new THREE.MeshStandardMaterial({
-        color: "#f2a433",
-        roughness: 0.38,
-        metalness: 0.08,
-        emissive: "#6f3b08",
+        color: "#e0b43a",
+        roughness: 0.24,
+        metalness: 0.72,
+        emissive: "#6b4c06",
         emissiveIntensity: 0.18,
       })
     );
@@ -600,24 +606,13 @@ function createCharacter(color, isSeeker = false) {
   shadow.receiveShadow = true;
   group.add(shadow);
 
-  const importedMask = isSeeker ? createAssetInstance("seekerMask") : null;
-  if (importedMask) {
-    importedMask.position.set(0, -0.08, 0.78);
-    importedMask.rotation.y += Math.PI;
-    importedMask.scale.multiplyScalar(0.78);
-    head.add(importedMask);
-    if (mask) {
-      mask.visible = false;
-    }
-  }
-
   const importedModel = isSeeker ? createAssetInstance("seeker") : null;
   if (importedModel) {
     importedModel.position.y = 0.1;
     group.add(importedModel);
   }
 
-  group.userData = { body, head, mask, leftEye, rightEye, smile, shadow, importedMask, importedModel };
+  group.userData = { body, head, mask, leftEye, rightEye, smile, shadow, importedModel };
   return group;
 }
 
