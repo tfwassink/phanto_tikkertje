@@ -273,6 +273,37 @@ function stylizeHumanModel(root, tint) {
   });
 }
 
+function getRenderableBounds(root) {
+  const bounds = new THREE.Box3();
+  let foundMesh = false;
+
+  root.updateMatrixWorld(true);
+  root.traverse((child) => {
+    if (!child.isMesh || !child.geometry) {
+      return;
+    }
+
+    if (!child.geometry.boundingBox) {
+      child.geometry.computeBoundingBox();
+    }
+
+    const childBounds = child.geometry.boundingBox.clone();
+    childBounds.applyMatrix4(child.matrixWorld);
+    if (!foundMesh) {
+      bounds.copy(childBounds);
+      foundMesh = true;
+    } else {
+      bounds.union(childBounds);
+    }
+  });
+
+  if (!foundMesh) {
+    bounds.setFromObject(root);
+  }
+
+  return bounds;
+}
+
 function createAssetInstance(key) {
   const asset = modelAssets[key];
   if (!asset || !asset.scene || !asset.size || !asset.center) {
@@ -380,7 +411,7 @@ function loadModelAsset(key) {
           return;
         }
         prepareImportedModel(sceneRoot);
-        const box = new THREE.Box3().setFromObject(sceneRoot);
+        const box = getRenderableBounds(sceneRoot);
         asset.scene = sceneRoot;
         asset.size = box.getSize(new THREE.Vector3());
         asset.center = box.getCenter(new THREE.Vector3());
