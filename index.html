@@ -71,9 +71,30 @@
       </div>
 
       <div class="menu-actions">
+        <button id="modelViewerButton" type="button">Modellen Bekijken</button>
         <button id="tutorialButton" type="button">Tutorial Starten</button>
         <button id="closeMenuButton" type="button">Terug Naar Spel</button>
       </div>
+
+      <section id="modelViewerPanel" class="viewer-panel" aria-label="Modelviewer">
+        <div class="viewer-copy">
+          <p class="eyebrow">Modelviewer</p>
+          <h3>Bekijk De 3D-Modellen</h3>
+          <p class="menu-copy">Kies hieronder een model. De preview verschijnt groot in de 3D-achtergrond van het menu.</p>
+        </div>
+        <div class="viewer-grid">
+          <button class="viewer-chip" type="button" data-preview="seeker">Tikker</button>
+          <button class="viewer-chip" type="button" data-preview="seekerMask">Masker</button>
+          <button class="viewer-chip" type="button" data-preview="crate">Krat</button>
+          <button class="viewer-chip" type="button" data-preview="barrel">Ton</button>
+          <button class="viewer-chip" type="button" data-preview="bush">Struik</button>
+          <button class="viewer-chip" type="button" data-preview="lamp">Lamp</button>
+          <button class="viewer-chip" type="button" data-preview="statue">Standbeeld</button>
+        </div>
+        <div class="menu-actions">
+          <button id="closeViewerButton" type="button">Terug Naar Menu</button>
+        </div>
+      </section>
     </div>
   </section>
 

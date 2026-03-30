@@ -81,6 +81,7 @@ body::before {
 
 h1,
 h2,
+h3,
 p,
 ul {
   margin: 0;
@@ -206,6 +207,41 @@ button:hover {
   padding: 26px;
 }
 
+.viewer-panel {
+  display: none;
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(40, 28, 22, 0.08);
+  border: 1px solid rgba(73, 49, 64, 0.14);
+}
+
+.viewer-panel.visible {
+  display: block;
+}
+
+.viewer-copy h3 {
+  font-size: 1.4rem;
+  margin-bottom: 8px;
+}
+
+.viewer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.viewer-chip {
+  min-height: 58px;
+  border-radius: 18px;
+  padding: 12px 14px;
+  text-align: center;
+  background:
+    linear-gradient(180deg, rgba(110, 73, 45, 0.95), rgba(61, 40, 27, 0.95)),
+    linear-gradient(180deg, #6d4d37, #3a271b);
+}
+
 .summary-card {
   width: min(760px, 100%);
   border-radius: 28px;
@@ -272,6 +308,10 @@ button:hover {
 
   .map-grid {
     grid-template-columns: 1fr;
+  }
+
+  .viewer-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .hud-main,

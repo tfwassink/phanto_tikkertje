@@ -7,8 +7,11 @@ const restartButton = document.getElementById("restartButton");
 const roleButton = document.getElementById("roleButton");
 const menuButton = document.getElementById("menuButton");
 const closeMenuButton = document.getElementById("closeMenuButton");
+const modelViewerButton = document.getElementById("modelViewerButton");
+const closeViewerButton = document.getElementById("closeViewerButton");
 const tutorialButton = document.getElementById("tutorialButton");
 const menuOverlay = document.getElementById("menuOverlay");
+const modelViewerPanel = document.getElementById("modelViewerPanel");
 const summaryOverlay = document.getElementById("summaryOverlay");
 const summaryTitle = document.getElementById("summaryTitle");
 const summaryText = document.getElementById("summaryText");
@@ -16,6 +19,7 @@ const summaryStats = document.getElementById("summaryStats");
 const playAgainButton = document.getElementById("playAgainButton");
 const summaryMenuButton = document.getElementById("summaryMenuButton");
 const mapButtons = [...document.querySelectorAll(".map-card")];
+const modelPreviewButtons = [...document.querySelectorAll(".viewer-chip")];
 const hudTitle = document.getElementById("hudTitle");
 const hudMap = document.getElementById("hudMap");
 const hudRole = document.getElementById("hudRole");
@@ -44,8 +48,10 @@ const gltfLoader = new GLTFLoader();
 
 const worldRoot = new THREE.Group();
 const gameplayRoot = new THREE.Group();
+const viewerRoot = new THREE.Group();
 scene.add(worldRoot);
 scene.add(gameplayRoot);
+scene.add(viewerRoot);
 
 const world = {
   width: 140,
@@ -82,6 +88,10 @@ const state = {
     transformed: false,
     solvedPuzzle: false,
     threwMist: false,
+  },
+  viewer: {
+    active: false,
+    currentModel: "seeker",
   },
 };
 
@@ -275,6 +285,10 @@ function refreshImportedVisuals() {
       applyDisguise(hider, hider.disguisedAs);
     }
   });
+
+  if (state.viewer.active) {
+    showViewerModel(state.viewer.currentModel);
+  }
 }
 
 function findPropFromObject(object) {
@@ -320,6 +334,70 @@ function loadModelAsset(key) {
 
 function loadModelAssets() {
   return Promise.all(Object.keys(modelAssets).map((key) => loadModelAsset(key)));
+}
+
+function clearViewerModel() {
+  viewerRoot.clear();
+}
+
+function createSeekerMaskFallback() {
+  const group = new THREE.Group();
+  const shell = new THREE.Mesh(
+    new THREE.SphereGeometry(1.15, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.62),
+    new THREE.MeshStandardMaterial({ color: "#f2a433", roughness: 0.38, metalness: 0.08 })
+  );
+  shell.scale.set(1.05, 1.02, 0.82);
+  shell.castShadow = true;
+  const smile = new THREE.Mesh(
+    new THREE.TorusGeometry(0.48, 0.07, 10, 20, Math.PI),
+    new THREE.MeshStandardMaterial({ color: "#61101f", emissive: "#2d0006", emissiveIntensity: 0.6 })
+  );
+  smile.rotation.z = Math.PI;
+  smile.position.set(0, -0.2, 0.92);
+  group.add(shell, smile);
+  return group;
+}
+
+function createViewerModel(key) {
+  if (key === "seeker") {
+    return createCharacter("#7c4a1f", true);
+  }
+  if (key === "seekerMask") {
+    return createAssetInstance("seekerMask") || createSeekerMaskFallback();
+  }
+  return createPropMesh(key);
+}
+
+function showViewerModel(key) {
+  state.viewer.currentModel = key;
+  clearViewerModel();
+
+  const pedestal = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.8, 3.3, 1.2, 28),
+    new THREE.MeshStandardMaterial({ color: "#6f5846", roughness: 0.82 })
+  );
+  pedestal.position.y = 0.6;
+  pedestal.receiveShadow = true;
+  viewerRoot.add(pedestal);
+
+  const model = createViewerModel(key);
+  if (model) {
+    model.position.y = 1.2;
+    viewerRoot.add(model);
+    viewerRoot.userData.previewModel = model;
+  }
+}
+
+function openModelViewer(defaultKey = "seeker") {
+  state.viewer.active = true;
+  modelViewerPanel.classList.add("visible");
+  showViewerModel(defaultKey);
+}
+
+function closeModelViewer() {
+  state.viewer.active = false;
+  modelViewerPanel.classList.remove("visible");
+  clearViewerModel();
 }
 
 function showMenu() {
@@ -1325,6 +1403,23 @@ function updateSeekerVisual(delta) {
 }
 
 function updateCamera(delta) {
+  if (state.viewer.active) {
+    const previewModel = viewerRoot.userData.previewModel;
+    if (previewModel) {
+      previewModel.rotation.y += delta * 0.75;
+    }
+    worldRoot.visible = false;
+    gameplayRoot.visible = false;
+    viewerRoot.visible = true;
+    const desired = new THREE.Vector3(0, 9.5, 16);
+    camera.position.lerp(desired, 1 - Math.exp(-delta * 3));
+    camera.lookAt(0, 4.4, 0);
+    return;
+  }
+
+  worldRoot.visible = true;
+  gameplayRoot.visible = true;
+  viewerRoot.visible = false;
   const actor = controlledActor();
   const target = actor ? actor.mesh.position : new THREE.Vector3(0, 0, 0);
   const desired = new THREE.Vector3(target.x + 22, 34, target.z + 30);
@@ -1452,6 +1547,7 @@ menuButton.addEventListener("click", () => {
 });
 
 closeMenuButton.addEventListener("click", () => {
+  closeModelViewer();
   hideMenu();
 });
 
@@ -1459,13 +1555,29 @@ roleButton.addEventListener("click", () => {
   cycleControlMode();
 });
 
+modelViewerButton.addEventListener("click", () => {
+  openModelViewer(state.viewer.currentModel);
+});
+
+closeViewerButton.addEventListener("click", () => {
+  closeModelViewer();
+});
+
 tutorialButton.addEventListener("click", () => {
+  closeModelViewer();
   startTutorial();
 });
 
 mapButtons.forEach((button) => {
   button.addEventListener("click", () => {
+    closeModelViewer();
     startMap(button.dataset.map);
+  });
+});
+
+modelPreviewButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    openModelViewer(button.dataset.preview);
   });
 });
 
