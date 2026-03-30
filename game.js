@@ -8,11 +8,13 @@ const roleButton = document.getElementById("roleButton");
 const menuButton = document.getElementById("menuButton");
 const closeMenuButton = document.getElementById("closeMenuButton");
 const modelViewerButton = document.getElementById("modelViewerButton");
+const startMapButton = document.getElementById("startMapButton");
 const closeViewerButton = document.getElementById("closeViewerButton");
 const tutorialButton = document.getElementById("tutorialButton");
 const menuOverlay = document.getElementById("menuOverlay");
 const menuCard = document.getElementById("menuCard");
 const modelViewerPanel = document.getElementById("modelViewerPanel");
+const menuHint = document.getElementById("menuHint");
 const summaryOverlay = document.getElementById("summaryOverlay");
 const summaryTitle = document.getElementById("summaryTitle");
 const summaryText = document.getElementById("summaryText");
@@ -51,10 +53,12 @@ const worldRoot = new THREE.Group();
 const gameplayRoot = new THREE.Group();
 const viewerRoot = new THREE.Group();
 const viewerLightRig = new THREE.Group();
+const mapPreviewRoot = new THREE.Group();
 scene.add(worldRoot);
 scene.add(gameplayRoot);
 scene.add(viewerRoot);
 scene.add(viewerLightRig);
+scene.add(mapPreviewRoot);
 
 const world = {
   width: 140,
@@ -63,6 +67,8 @@ const world = {
 
 const SEEKER_VIEW_DISTANCE = 32;
 const DISGUISE_STILL_SPEED = 0.02;
+const JUMP_SPEED = 10.5;
+const GRAVITY = 28;
 
 const state = {
   currentMap: "plaza",
@@ -75,6 +81,7 @@ const state = {
   puzzlePenalty: 16,
   mistCooldown: 0,
   message: "Kies in het menu een map of start de tutorial.",
+  selectedMap: "plaza",
   lastTime: 0,
   statusTimer: 0,
   playedRound: false,
@@ -94,6 +101,7 @@ const state = {
   },
   viewer: {
     active: false,
+    mode: "model",
     currentModel: "seeker",
   },
 };
@@ -107,6 +115,8 @@ const seeker = {
   facing: new THREE.Vector3(1, 0, 0),
   flashTimer: 0,
   aiCooldown: 0,
+  jumpHeight: 0,
+  jumpVelocity: 0,
 };
 
 const hiders = [];
@@ -170,37 +180,39 @@ const mapConfigs = {
     ],
   },
   garden: {
-    name: "Misttuin",
-    sky: "#dfe7c9",
-    fog: "#dfe7c9",
-    groundA: "#b7ca8c",
-    groundB: "#769068",
-    mountain: "#70805d",
+    name: "Misttuin Villa",
+    sky: "#d8e3cb",
+    fog: "#dbe6d2",
+    groundA: "#a8c78f",
+    groundB: "#d5c5a4",
+    mountain: "#698061",
     timeLimit: 165,
     puzzlePenalty: 14,
-    seekerSpawn: [6, 0, 0],
+    seekerSpawn: [0, 0, 30],
     hiderSpawns: [
-      [-44, 0, 26],
-      [46, 0, 28],
-      [42, 0, -31],
+      [-28, 0, -34],
+      [28, 0, -34],
+      [0, 0, 6],
     ],
     props: [
-      [-54, 0, -34, "bush"], [-44, 0, -28, "bush"], [-33, 0, -35, "crate"], [-20, 0, -33, "barrel"],
-      [-6, 0, -36, "lamp"], [8, 0, -32, "bush"], [22, 0, -35, "crate"], [36, 0, -36, "statue"],
-      [48, 0, -30, "bush"], [58, 0, -35, "barrel"], [-54, 0, -8, "crate"], [-40, 0, -9, "bush"],
-      [-26, 0, -7, "lamp"], [-10, 0, -8, "barrel"], [4, 0, -8, "bush"], [18, 0, -6, "crate"],
-      [32, 0, -6, "bush"], [47, 0, -4, "statue"], [58, 0, -7, "bush"], [-52, 0, 18, "lamp"],
-      [-38, 0, 24, "bush"], [-22, 0, 18, "crate"], [-4, 0, 22, "bush"], [13, 0, 16, "barrel"],
-      [27, 0, 23, "lamp"], [42, 0, 18, "bush"], [57, 0, 22, "crate"], [-48, 0, 42, "barrel"],
-      [-28, 0, 43, "bush"], [-8, 0, 42, "crate"], [11, 0, 44, "lamp"], [32, 0, 41, "bush"],
-      [49, 0, 43, "barrel"], [60, 0, 41, "crate"],
+      [-45, 0, -38, "bush"], [-36, 0, -34, "bush"], [-27, 0, -39, "lamp"], [-15, 0, -38, "bush"],
+      [15, 0, -38, "bush"], [27, 0, -39, "lamp"], [36, 0, -34, "bush"], [45, 0, -38, "bush"],
+      [-50, 0, -18, "bush"], [-36, 0, -14, "crate"], [-24, 0, -14, "barrel"], [-14, 0, -16, "bush"],
+      [14, 0, -16, "bush"], [24, 0, -14, "barrel"], [36, 0, -14, "crate"], [50, 0, -18, "bush"],
+      [-44, 0, 0, "lamp"], [-34, 0, 0, "crate"], [-23, 0, 0, "barrel"], [-12, 0, 0, "statue"],
+      [12, 0, 0, "statue"], [23, 0, 0, "barrel"], [34, 0, 0, "crate"], [44, 0, 0, "lamp"],
+      [-42, 0, 18, "bush"], [-28, 0, 18, "crate"], [-14, 0, 18, "barrel"], [14, 0, 18, "barrel"],
+      [28, 0, 18, "crate"], [42, 0, 18, "bush"], [-18, 0, 33, "bush"], [18, 0, 33, "bush"],
+      [-16, 0, -2, "crate"], [16, 0, -2, "crate"], [-8, 0, 8, "barrel"], [8, 0, 8, "barrel"],
+      [-18, 0, 13, "lamp"], [18, 0, 13, "lamp"], [-8, 0, -15, "statue"], [8, 0, -15, "statue"],
+      [-28, 0, 8, "crate"], [28, 0, 8, "crate"], [0, 0, 18, "statue"], [0, 0, -18, "statue"],
     ],
     puzzles: [
-      [-35, 0, 2],
-      [-4, 0, -23],
-      [30, 0, 3],
-      [0, 0, 39],
-      [45, 0, -18],
+      [-34, 0, -24],
+      [34, 0, -24],
+      [0, 0, -8],
+      [-18, 0, 14],
+      [18, 0, 14],
     ],
   },
 };
@@ -509,23 +521,28 @@ function showViewerModel(key) {
 
 function openModelViewer(defaultKey = "seeker") {
   state.viewer.active = true;
+  state.viewer.mode = "model";
   menuOverlay.classList.add("viewer-mode");
   menuCard.classList.add("viewer-mode");
   modelViewerPanel.classList.add("visible");
+  menuHint.textContent = "Klik op een mapkaart om een map te bekijken, of bekijk hieronder losse modellen.";
   showViewerModel(defaultKey);
 }
 
 function closeModelViewer() {
   state.viewer.active = false;
+  state.viewer.mode = "model";
   menuOverlay.classList.remove("viewer-mode");
   menuCard.classList.remove("viewer-mode");
   modelViewerPanel.classList.remove("visible");
   viewerLightRig.clear();
   clearViewerModel();
+  menuHint.textContent = "Klik op een mapkaart om hem rustig te bekijken. Start daarna de geselecteerde map of begin de tutorial.";
 }
 
 function showMenu() {
   menuOverlay.classList.add("visible");
+  showMapPreview(state.selectedMap || state.currentMap || "plaza");
 }
 
 function hideMenu() {
@@ -809,6 +826,148 @@ function createPropMesh(kind) {
   return group;
 }
 
+function createHedge(width, depth, height = 3.1) {
+  const hedge = new THREE.Mesh(
+    new THREE.BoxGeometry(width, height, depth),
+    new THREE.MeshStandardMaterial({ color: "#6c924b", roughness: 0.95 })
+  );
+  hedge.position.y = height * 0.5;
+  hedge.castShadow = true;
+  hedge.receiveShadow = true;
+  return hedge;
+}
+
+function createFountain(scale = 1) {
+  const group = new THREE.Group();
+
+  const basin = new THREE.Mesh(
+    new THREE.CylinderGeometry(4.4 * scale, 5.4 * scale, 1.2 * scale, 28),
+    new THREE.MeshStandardMaterial({ color: "#d9dce6", roughness: 0.55 })
+  );
+  basin.position.y = 0.6 * scale;
+  basin.receiveShadow = true;
+
+  const water = new THREE.Mesh(
+    new THREE.CylinderGeometry(3.7 * scale, 4.4 * scale, 0.36 * scale, 28),
+    new THREE.MeshStandardMaterial({
+      color: "#7cd0ff",
+      roughness: 0.2,
+      metalness: 0.08,
+      emissive: "#4bb8ff",
+      emissiveIntensity: 0.18,
+      transparent: true,
+      opacity: 0.88,
+    })
+  );
+  water.position.y = 1.04 * scale;
+
+  const column = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.9 * scale, 1.1 * scale, 3.5 * scale, 18),
+    new THREE.MeshStandardMaterial({ color: "#c8cbd7", roughness: 0.45 })
+  );
+  column.position.y = 2.2 * scale;
+  column.castShadow = true;
+
+  const topper = new THREE.Mesh(
+    new THREE.SphereGeometry(0.75 * scale, 16, 16),
+    new THREE.MeshStandardMaterial({ color: "#f3e4b2", roughness: 0.3, emissive: "#d3bd63", emissiveIntensity: 0.15 })
+  );
+  topper.position.y = 4.3 * scale;
+  topper.castShadow = true;
+
+  group.add(basin, water, column, topper);
+  return group;
+}
+
+function createVillaStructure() {
+  const group = new THREE.Group();
+
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(68, 12, 34),
+    new THREE.MeshStandardMaterial({ color: "#e5dbc8", roughness: 0.84 })
+  );
+  base.position.set(0, 6, -4);
+  base.castShadow = true;
+  base.receiveShadow = true;
+
+  const upper = new THREE.Mesh(
+    new THREE.BoxGeometry(34, 10, 20),
+    new THREE.MeshStandardMaterial({ color: "#efe6d6", roughness: 0.8 })
+  );
+  upper.position.set(0, 17, -6);
+  upper.castShadow = true;
+  upper.receiveShadow = true;
+
+  const roofMain = new THREE.Mesh(
+    new THREE.ConeGeometry(29, 11, 4),
+    new THREE.MeshStandardMaterial({ color: "#5e4436", roughness: 0.92 })
+  );
+  roofMain.rotation.y = Math.PI * 0.25;
+  roofMain.position.set(0, 27, -4);
+  roofMain.scale.z = 0.7;
+  roofMain.castShadow = true;
+
+  const roofUpper = roofMain.clone();
+  roofUpper.scale.set(0.66, 0.72, 0.54);
+  roofUpper.position.set(0, 33, -6);
+
+  const floor = new THREE.Mesh(
+    new THREE.BoxGeometry(58, 0.6, 24),
+    new THREE.MeshStandardMaterial({ color: "#a7815d", roughness: 0.88 })
+  );
+  floor.position.set(0, 0.3, -2);
+  floor.receiveShadow = true;
+
+  const terrace = new THREE.Mesh(
+    new THREE.BoxGeometry(28, 0.5, 12),
+    new THREE.MeshStandardMaterial({ color: "#cfb692", roughness: 0.85 })
+  );
+  terrace.position.set(0, 0.25, 18);
+  terrace.receiveShadow = true;
+
+  const door = new THREE.Mesh(
+    new THREE.BoxGeometry(7, 9, 0.8),
+    new THREE.MeshStandardMaterial({ color: "#75472b", roughness: 0.6 })
+  );
+  door.position.set(0, 4.5, 12.8);
+  door.castShadow = true;
+
+  group.add(base, upper, roofMain, roofUpper, floor, terrace, door);
+
+  for (let x = -24; x <= 24; x += 12) {
+    const windowFrame = new THREE.Mesh(
+      new THREE.BoxGeometry(5.2, 5.2, 0.7),
+      new THREE.MeshStandardMaterial({ color: "#4f5d6f", emissive: "#f7d47a", emissiveIntensity: 0.12 })
+    );
+    windowFrame.position.set(x, 8, 12.95);
+    windowFrame.castShadow = true;
+    group.add(windowFrame);
+  }
+
+  for (let x = -12; x <= 12; x += 12) {
+    const upperWindow = new THREE.Mesh(
+      new THREE.BoxGeometry(4.4, 4.8, 0.7),
+      new THREE.MeshStandardMaterial({ color: "#4f5d6f", emissive: "#f7d47a", emissiveIntensity: 0.1 })
+    );
+    upperWindow.position.set(x, 18, 5.8);
+    upperWindow.castShadow = true;
+    group.add(upperWindow);
+  }
+
+  for (const x of [-33, 33]) {
+    const wing = new THREE.Mesh(
+      new THREE.BoxGeometry(8, 9, 14),
+      new THREE.MeshStandardMaterial({ color: "#ded2bc", roughness: 0.84 })
+    );
+    wing.position.set(x, 4.5, 0);
+    wing.castShadow = true;
+    wing.receiveShadow = true;
+    group.add(wing);
+  }
+
+  return group;
+}
+
 function createPuzzle(position, index) {
   const group = new THREE.Group();
   const base = new THREE.Mesh(
@@ -930,6 +1089,8 @@ function createHider(index, position, color, control) {
     solving: 0,
     moveMemory: new THREE.Vector3(1, 0, 0),
     lastMoveAmount: 0,
+    jumpHeight: 0,
+    jumpVelocity: 0,
   };
 }
 
@@ -970,6 +1131,7 @@ function createWorldDecor(config) {
   scene.fog = new THREE.Fog(config.fog, 65, 180);
 
   worldRoot.clear();
+  mapPreviewRoot.clear();
   mountainMeshes.length = 0;
   decorativeClouds.length = 0;
 
@@ -1025,12 +1187,135 @@ function createWorldDecor(config) {
     worldRoot.add(cloud);
     decorativeClouds.push(cloud);
   }
+
+  if (config.name.includes("Misttuin")) {
+    const villa = createVillaStructure();
+    worldRoot.add(villa);
+
+    const frontFountain = createFountain(1.05);
+    frontFountain.position.set(0, 0, 31);
+    worldRoot.add(frontFountain);
+
+    const sideFountainLeft = createFountain(0.72);
+    sideFountainLeft.position.set(-32, 0, 27);
+    worldRoot.add(sideFountainLeft);
+
+    const sideFountainRight = createFountain(0.72);
+    sideFountainRight.position.set(32, 0, 27);
+    worldRoot.add(sideFountainRight);
+
+    const path = new THREE.Mesh(
+      new THREE.PlaneGeometry(22, 46),
+      new THREE.MeshStandardMaterial({ color: "#d7c1a0", roughness: 0.92 })
+    );
+    path.rotation.x = -Math.PI / 2;
+    path.position.set(0, 0.04, 22);
+    worldRoot.add(path);
+
+    for (const x of [-42, -34, -26, 26, 34, 42]) {
+      const hedge = createHedge(5.4, 4.2, 3);
+      hedge.position.x = x;
+      hedge.position.z = 30;
+      worldRoot.add(hedge);
+    }
+
+    const hedgeBack = createHedge(56, 4.4, 3.2);
+    hedgeBack.position.set(0, 0, -28);
+    worldRoot.add(hedgeBack);
+
+    const hedgeLeft = createHedge(4, 52, 3.2);
+    hedgeLeft.position.set(-50, 0, 2);
+    worldRoot.add(hedgeLeft);
+
+    const hedgeRight = createHedge(4, 52, 3.2);
+    hedgeRight.position.set(50, 0, 2);
+    worldRoot.add(hedgeRight);
+  }
+}
+
+function setSelectedMap(mapKey) {
+  state.selectedMap = mapKey;
+  mapButtons.forEach((button) => {
+    button.classList.toggle("selected", button.dataset.map === mapKey);
+  });
+}
+
+function createMapPreview(mapKey) {
+  const config = mapConfigs[mapKey] || mapConfigs.plaza;
+  const group = new THREE.Group();
+
+  const ground = new THREE.Mesh(
+    new THREE.CylinderGeometry(28, 30, 1.8, 40),
+    new THREE.MeshStandardMaterial({ color: config.groundA, roughness: 0.96 })
+  );
+  ground.receiveShadow = true;
+  group.add(ground);
+
+  const accent = new THREE.Mesh(
+    new THREE.CylinderGeometry(21, 21, 0.3, 32),
+    new THREE.MeshStandardMaterial({ color: config.groundB, roughness: 0.88 })
+  );
+  accent.position.y = 0.95;
+  group.add(accent);
+
+  if (mapKey === "garden") {
+    const villa = createVillaStructure();
+    villa.scale.setScalar(0.34);
+    villa.position.y = 0.9;
+    villa.position.z = -2;
+    group.add(villa);
+
+    const fountain = createFountain(0.32);
+    fountain.position.set(0, 0.95, 10);
+    group.add(fountain);
+
+    for (const x of [-14, -9, 9, 14]) {
+      const hedge = createHedge(4.2, 3, 2.2);
+      hedge.position.set(x, 0.95, 12);
+      group.add(hedge);
+    }
+  } else {
+    for (const [x, , z, kind] of config.props.slice(0, 8)) {
+      const prop = createPropMesh(kind);
+      prop.position.set(x * 0.28, 0.9, z * 0.28);
+      prop.scale.multiplyScalar(0.42);
+      group.add(prop);
+    }
+  }
+
+  return group;
+}
+
+function showMapPreview(mapKey) {
+  state.viewer.active = true;
+  state.viewer.mode = "map";
+  menuOverlay.classList.add("viewer-mode");
+  menuCard.classList.add("viewer-mode");
+  modelViewerPanel.classList.remove("visible");
+  viewerLightRig.clear();
+  clearViewerModel();
+
+  const ambient = new THREE.HemisphereLight("#fff8e8", "#d8c4a5", 2.1);
+  const keyLight = new THREE.DirectionalLight("#fff5d2", 2.3);
+  keyLight.position.set(8, 14, 10);
+  const fillLight = new THREE.DirectionalLight("#f9e7c7", 1.4);
+  fillLight.position.set(-10, 8, 7);
+  viewerLightRig.add(ambient, keyLight, fillLight);
+
+  const preview = createMapPreview(mapKey);
+  viewerRoot.add(preview);
+  viewerRoot.userData.previewModel = preview;
+
+  const config = mapConfigs[mapKey] || mapConfigs.plaza;
+  menuHint.textContent = `${config.name} geselecteerd. Bekijk de map rustig en klik daarna op Start Geselecteerde Map.`;
+  setSelectedMap(mapKey);
 }
 
 function setupRound(config, mode) {
   clearGameplay();
   hideSummary();
   state.currentMap = Object.keys(mapConfigs).find((key) => mapConfigs[key] === config) || state.currentMap;
+  state.selectedMap = state.currentMap;
   state.mapName = config.name;
   state.mode = mode;
   state.running = true;
@@ -1056,6 +1341,8 @@ function setupRound(config, mode) {
   seeker.mesh.position.set(...config.seekerSpawn);
   seeker.mesh.position.y = 0;
   seeker.facing.set(-1, 0, 0);
+  seeker.jumpHeight = 0;
+  seeker.jumpVelocity = 0;
   seeker.moveTarget.copy(seeker.mesh.position);
   seeker.aiCooldown = rand(0.5, 1.2);
   gameplayRoot.add(seeker.mesh);
@@ -1093,6 +1380,7 @@ function setupRound(config, mode) {
     assignRandomControlRole();
   }
   updateRoleButton();
+  setSelectedMap(state.currentMap);
   updateHud();
 }
 
@@ -1181,6 +1469,31 @@ function moveActor(actor, direction, delta) {
     actor.lastMoveAmount = moved;
   }
   return moved;
+}
+
+function updateActorJump(actor, delta) {
+  if (!actor || !actor.mesh) {
+    return;
+  }
+  if (actor.jumpHeight > 0 || actor.jumpVelocity !== 0) {
+    actor.jumpVelocity -= GRAVITY * delta;
+    actor.jumpHeight = Math.max(0, actor.jumpHeight + actor.jumpVelocity * delta);
+    if (actor.jumpHeight === 0 && actor.jumpVelocity < 0) {
+      actor.jumpVelocity = 0;
+    }
+  }
+  actor.mesh.position.y = actor.jumpHeight;
+}
+
+function tryJump() {
+  if (!state.running) {
+    return;
+  }
+  const actor = controlledActor();
+  if (!actor || actor.jumpHeight > 0.02) {
+    return;
+  }
+  actor.jumpVelocity = JUMP_SPEED;
 }
 
 function hiderVisibleToSeeker(hider) {
@@ -1291,6 +1604,7 @@ function updatePlayer(delta) {
   if (!actor) {
     return;
   }
+  updateActorJump(actor, delta);
   const direction = movementVector();
   const walked = moveActor(actor, direction, delta);
 
@@ -1319,6 +1633,7 @@ function updateAiHiders(delta) {
       return;
     }
 
+    updateActorJump(hider, delta);
     hider.lastMoveAmount = 0;
     hider.aiTimer -= delta;
     const nearest = nearestPuzzle(hider);
@@ -1358,6 +1673,7 @@ function updateAiSeeker(delta) {
   if (state.controlMode === "seeker" || state.mode === "tutorial") {
     return;
   }
+  updateActorJump(seeker, delta);
   seeker.aiCooldown -= delta;
   const targets = activeHiders().filter((hider) => hiderVisibleToSeeker(hider));
   if (!targets.length) {
@@ -1539,17 +1855,20 @@ function updateSeekerVisual(delta) {
 function updateCamera(delta) {
   if (state.viewer.active) {
     const previewModel = viewerRoot.userData.previewModel;
-    if (previewModel) {
+    if (previewModel && state.viewer.mode === "model") {
       previewModel.rotation.y += delta * 0.75;
     }
     scene.background = new THREE.Color("#f6e7c7");
     worldRoot.visible = false;
     gameplayRoot.visible = false;
+    mapPreviewRoot.visible = false;
     viewerRoot.visible = true;
     viewerLightRig.visible = true;
-    const desired = new THREE.Vector3(0, 9.5, 16);
+    const desired = state.viewer.mode === "map"
+      ? new THREE.Vector3(0, 17, 27)
+      : new THREE.Vector3(0, 9.5, 16);
     camera.position.lerp(desired, 1 - Math.exp(-delta * 3));
-    camera.lookAt(0, 4.4, 0);
+    camera.lookAt(0, state.viewer.mode === "map" ? 4.2 : 4.4, 0);
     return;
   }
 
@@ -1557,6 +1876,7 @@ function updateCamera(delta) {
   worldRoot.visible = true;
   gameplayRoot.visible = true;
   viewerRoot.visible = false;
+  mapPreviewRoot.visible = false;
   const actor = controlledActor();
   const target = actor ? actor.mesh.position : new THREE.Vector3(0, 0, 0);
   const desired = new THREE.Vector3(target.x + 22, 34, target.z + 30);
@@ -1661,6 +1981,10 @@ window.addEventListener("keydown", (event) => {
     event.preventDefault();
     tryThrowMist();
   }
+  if (key === " " || key === "spacebar") {
+    event.preventDefault();
+    tryJump();
+  }
 });
 
 window.addEventListener("keyup", (event) => {
@@ -1697,7 +2021,7 @@ modelViewerButton.addEventListener("click", () => {
 });
 
 closeViewerButton.addEventListener("click", () => {
-  closeModelViewer();
+  showMapPreview(state.selectedMap);
 });
 
 tutorialButton.addEventListener("click", () => {
@@ -1707,9 +2031,13 @@ tutorialButton.addEventListener("click", () => {
 
 mapButtons.forEach((button) => {
   button.addEventListener("click", () => {
-    closeModelViewer();
-    startMap(button.dataset.map);
+    showMapPreview(button.dataset.map);
   });
+});
+
+startMapButton.addEventListener("click", () => {
+  closeModelViewer();
+  startMap(state.selectedMap);
 });
 
 modelPreviewButtons.forEach((button) => {
@@ -1730,6 +2058,8 @@ summaryMenuButton.addEventListener("click", () => {
 
 resizeRenderer();
 createWorldDecor(mapConfigs.plaza);
+setSelectedMap(state.selectedMap);
+showMapPreview(state.selectedMap);
 updateRoleButton();
 updateHud();
 loadModelAssets();

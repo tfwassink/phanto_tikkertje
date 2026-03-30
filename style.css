@@ -270,6 +270,10 @@ button:hover {
   margin-top: 8px;
 }
 
+#menuHint {
+  margin-top: 4px;
+}
+
 .summary-stats {
   margin: 22px 0;
   padding-left: 20px;
@@ -293,6 +297,14 @@ button:hover {
   background:
     linear-gradient(180deg, rgba(255, 201, 120, 0.95), rgba(209, 119, 67, 0.95)),
     linear-gradient(180deg, var(--orange), var(--orange-dark));
+}
+
+.map-card.selected {
+  outline: 3px solid rgba(255, 248, 213, 0.92);
+  box-shadow:
+    0 0 0 2px rgba(126, 70, 33, 0.2),
+    0 14px 28px rgba(63, 38, 18, 0.24);
+  transform: translateY(-2px);
 }
 
 .map-card[data-map="garden"] {
