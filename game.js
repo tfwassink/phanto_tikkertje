@@ -372,7 +372,7 @@ function createViewerModel(key) {
     return createCharacter("#7c4a1f", true);
   }
   if (key === "seekerMask") {
-    return createSeekerMaskFallback();
+    return createAssetInstance("seekerMask") || createSeekerMaskFallback();
   }
   return createPropMesh(key);
 }
@@ -606,13 +606,24 @@ function createCharacter(color, isSeeker = false) {
   shadow.receiveShadow = true;
   group.add(shadow);
 
+  const importedMask = isSeeker ? createAssetInstance("seekerMask") : null;
+  if (importedMask) {
+    importedMask.position.set(0, -0.02, 0.74);
+    importedMask.rotation.y += Math.PI;
+    importedMask.scale.multiplyScalar(0.72);
+    head.add(importedMask);
+    if (mask) {
+      mask.visible = false;
+    }
+  }
+
   const importedModel = isSeeker ? createAssetInstance("seeker") : null;
   if (importedModel) {
     importedModel.position.y = 0.1;
     group.add(importedModel);
   }
 
-  group.userData = { body, head, mask, leftEye, rightEye, smile, shadow, importedModel };
+  group.userData = { body, head, mask, leftEye, rightEye, smile, shadow, importedMask, importedModel };
   return group;
 }
 
