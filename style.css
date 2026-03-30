@@ -192,6 +192,7 @@ button:hover {
 }
 
 .menu-overlay.viewer-mode {
+  background: rgba(245, 229, 201, 0.18);
   place-items: stretch;
   align-items: center;
   justify-items: start;
@@ -218,6 +219,8 @@ button:hover {
   margin-left: 18px;
   max-height: calc(100vh - 48px);
   overflow-y: auto;
+  background: rgba(255, 248, 239, 0.92);
+  box-shadow: 0 24px 54px rgba(51, 34, 21, 0.14);
 }
 
 .viewer-panel {

@@ -50,9 +50,11 @@ const gltfLoader = new GLTFLoader();
 const worldRoot = new THREE.Group();
 const gameplayRoot = new THREE.Group();
 const viewerRoot = new THREE.Group();
+const viewerLightRig = new THREE.Group();
 scene.add(worldRoot);
 scene.add(gameplayRoot);
 scene.add(viewerRoot);
+scene.add(viewerLightRig);
 
 const world = {
   width: 140,
@@ -373,13 +375,31 @@ function showViewerModel(key) {
   state.viewer.currentModel = key;
   clearViewerModel();
 
+  viewerLightRig.clear();
+  const ambient = new THREE.HemisphereLight("#fff8e8", "#d8c4a5", 2.4);
+  const keyLight = new THREE.DirectionalLight("#fff5d2", 2.8);
+  keyLight.position.set(8, 14, 10);
+  const fillLight = new THREE.DirectionalLight("#f9e7c7", 1.6);
+  fillLight.position.set(-10, 8, 7);
+  const rimLight = new THREE.PointLight("#ffffff", 18, 30, 2);
+  rimLight.position.set(0, 8, 8);
+  viewerLightRig.add(ambient, keyLight, fillLight, rimLight);
+
   const pedestal = new THREE.Mesh(
     new THREE.CylinderGeometry(2.8, 3.3, 1.2, 28),
-    new THREE.MeshStandardMaterial({ color: "#6f5846", roughness: 0.82 })
+    new THREE.MeshStandardMaterial({ color: "#b69172", roughness: 0.72 })
   );
   pedestal.position.y = 0.6;
   pedestal.receiveShadow = true;
   viewerRoot.add(pedestal);
+
+  const floorGlow = new THREE.Mesh(
+    new THREE.CircleGeometry(6.4, 48),
+    new THREE.MeshBasicMaterial({ color: "#fff1cf", transparent: true, opacity: 0.45 })
+  );
+  floorGlow.rotation.x = -Math.PI / 2;
+  floorGlow.position.y = 0.03;
+  viewerRoot.add(floorGlow);
 
   const model = createViewerModel(key);
   if (model) {
@@ -402,6 +422,7 @@ function closeModelViewer() {
   menuOverlay.classList.remove("viewer-mode");
   menuCard.classList.remove("viewer-mode");
   modelViewerPanel.classList.remove("visible");
+  viewerLightRig.clear();
   clearViewerModel();
 }
 
@@ -1413,15 +1434,18 @@ function updateCamera(delta) {
     if (previewModel) {
       previewModel.rotation.y += delta * 0.75;
     }
+    scene.background = new THREE.Color("#f6e7c7");
     worldRoot.visible = false;
     gameplayRoot.visible = false;
     viewerRoot.visible = true;
+    viewerLightRig.visible = true;
     const desired = new THREE.Vector3(0, 9.5, 16);
     camera.position.lerp(desired, 1 - Math.exp(-delta * 3));
     camera.lookAt(0, 4.4, 0);
     return;
   }
 
+  viewerLightRig.visible = false;
   worldRoot.visible = true;
   gameplayRoot.visible = true;
   viewerRoot.visible = false;
