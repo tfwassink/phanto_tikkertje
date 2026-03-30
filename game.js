@@ -224,6 +224,35 @@ function prepareImportedModel(root) {
   });
 }
 
+function stylizeSeekerMaskModel(root) {
+  root.traverse((child) => {
+    if (!child.isMesh || !child.material) {
+      return;
+    }
+
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    materials.forEach((material) => {
+      if (!material || !material.name) {
+        return;
+      }
+
+      if (material.name === "Mask") {
+        material.color = new THREE.Color("#e0b43a");
+        material.metalness = 0.72;
+        material.roughness = 0.24;
+        material.emissive = new THREE.Color("#6b4c06");
+        material.emissiveIntensity = 0.18;
+      }
+
+      if (material.name === "Strap" || material.name === "Holders") {
+        material.transparent = true;
+        material.opacity = 0;
+        material.depthWrite = false;
+      }
+    });
+  });
+}
+
 function createAssetInstance(key) {
   const asset = modelAssets[key];
   if (!asset || !asset.scene || !asset.size || !asset.center) {
@@ -234,6 +263,9 @@ function createAssetInstance(key) {
     const wrapper = new THREE.Group();
     const model = cloneSkinned(asset.scene);
     prepareImportedModel(model);
+    if (key === "seekerMask") {
+      stylizeSeekerMaskModel(model);
+    }
 
     const scale = asset.desiredHeight / Math.max(asset.size.y, 0.001);
     model.scale.setScalar(scale);
