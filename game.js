@@ -602,9 +602,10 @@ function createCharacter(color, isSeeker = false) {
 
   const importedMask = isSeeker ? createAssetInstance("seekerMask") : null;
   if (importedMask) {
-    importedMask.position.set(0, 3.85, 1.08);
+    importedMask.position.set(0, -0.08, 0.78);
     importedMask.rotation.y += Math.PI;
-    group.add(importedMask);
+    importedMask.scale.multiplyScalar(0.78);
+    head.add(importedMask);
     if (mask) {
       mask.visible = false;
     }
