@@ -429,6 +429,9 @@ function createViewerModel(key) {
   if (key === "seeker") {
     return createCharacter("#7c4a1f", true);
   }
+  if (key === "hider") {
+    return createCharacter("#58b6ff", false);
+  }
   if (key === "seekerMask") {
     return createAssetInstance("seekerMask") || createSeekerMaskFallback();
   }
