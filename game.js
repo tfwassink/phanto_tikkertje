@@ -65,8 +65,8 @@ scene.add(viewerLightRig);
 scene.add(mapPreviewRoot);
 
 const world = {
-  width: 184,
-  depth: 132,
+  width: 220,
+  depth: 164,
 };
 
 const SEEKER_VIEW_DISTANCE = 32;
@@ -185,7 +185,7 @@ const modelAssets = {
   resourceGold: { path: "assets/models/poly-forest/resource-gold.glb", desiredHeight: 3.6, rotationY: 0, scene: null, size: null, center: null },
   twistedTreeB: { path: "assets/models/poly-forest/twisted-tree-b.glb", desiredHeight: 19.5, rotationY: 0, scene: null, size: null, center: null },
   pineC: { path: "assets/models/poly-forest/pine-c.glb", desiredHeight: 23, rotationY: 0, scene: null, size: null, center: null },
-  fantasySawmill: { path: "assets/models/fantasy-sawmill.glb", desiredHeight: 12.5, rotationY: 0, scene: null, size: null, center: null },
+  fantasySawmill: { path: "assets/models/fantasy-sawmill.glb", desiredHeight: 17.5, rotationY: 0, scene: null, size: null, center: null },
   tentO: { path: "assets/models/tent-o.glb", desiredHeight: 6.6, rotationY: 0, scene: null, size: null, center: null },
   bonfire: { path: "assets/models/bonfire.glb", desiredHeight: 2.8, rotationY: 0, scene: null, size: null, center: null },
   crate: { path: "assets/models/crate.glb", desiredHeight: 3.6, rotationY: 0, scene: null, size: null, center: null },
@@ -229,8 +229,8 @@ const MISTBOS_PROP_LAYOUT = [
   [11, 0, -16, "resourceGold"], [27, 0, -9, "twistedTreeB"], [35, 0, -18, "bushA"], [50, 0, -11, "treeStump"],
   [-57, 0, 5, "pineB"], [-42, 0, 11, "fern"], [-21, 0, 3, "birchTrees"], [-6, 0, 12, "bushB"],
   [10, 0, 4, "tallGrass"], [23, 0, 13, "pineA"], [33, 0, 1, "mossyLog"], [55, 0, 9, "bushA"],
-  [-48, 0, 24, "twistedTreeA"], [-31, 0, 35, "pineC"], [-12, 0, 22, "treeStump"], [3, 0, 31, "treesCluster"],
-  [18, 0, 25, "fern"], [34, 0, 34, "twistedTreeB"], [47, 0, 27, "bushB"],
+  [-48, 0, 24, "twistedTreeA"], [-31, 0, 35, "pineC"], [-12, 0, 22, "treeStump"],
+  [47, 0, 27, "bushB"],
 ];
 
 const MISTBOS_WORLD_PLACEMENTS = [
@@ -241,7 +241,11 @@ const MISTBOS_WORLD_PLACEMENTS = [
 ];
 
 const MISTBOS_STRUCTURE_PLACEMENTS = [
-  ["fantasySawmill", -2, -1.2, -36, 1.16, Math.PI * 0.08],
+  ["fantasySawmill", -2, -1.5, -36, 1.34, Math.PI * 0.08],
+  ["bonfire", 27, -0.2, 33, 1.12, 0],
+  ["tentO", 27, -0.2, 24, 1.18, Math.PI, "forest"],
+  ["tentO", 34.8, -0.2, 37.5, 1.18, -Math.PI * 0.66, "ocean"],
+  ["tentO", 19.2, -0.2, 37.5, 1.18, Math.PI * 0.66, "crimson"],
 ];
 
 const MISTBOS_PREVIEW_PLACEMENTS = [
