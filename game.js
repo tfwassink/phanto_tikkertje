@@ -74,13 +74,6 @@ const DISGUISE_STILL_SPEED = 0.02;
 const JUMP_SPEED = 10.5;
 const GRAVITY = 28;
 const COLOR_WHEEL_RADIUS = 122;
-const COLORABLE_DISGUISE_KINDS = new Set([
-  "crate", "barrel", "bush", "lamp", "statue",
-  "forestNature", "forestWalk", "forestPond", "forestBlock", "fallTree",
-  "treeStump", "bushA", "pineA", "tallGrass", "twistedTreeA", "pineB",
-  "birchTrees", "treesCluster", "fern", "mossyLog", "bushB", "resourceGold",
-  "twistedTreeB", "pineC",
-]);
 const NON_DISGUISE_KINDS = new Set(["fantasySawmill", "bonfire"]);
 const DISGUISE_COLOR_PRESETS = [
   { id: "sunset", label: "Zon", color: "#f09b41", accent: "#ffd272", materialNames: ["leaves", "leaf", "bush", "grass"] },
@@ -450,7 +443,7 @@ function canCustomizeDisguise(kind) {
   if (NON_DISGUISE_KINDS.has(kind)) {
     return false;
   }
-  return COLORABLE_DISGUISE_KINDS.has(kind) || kind.endsWith("O");
+  return kind.endsWith("O");
 }
 
 function stylizeVillaModel(root) {
