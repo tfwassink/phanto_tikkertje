@@ -223,8 +223,8 @@ const propTypes = {
 };
 
 const MISTBOS_PROP_LAYOUT = [
-  [-56, 0, -35, "treeStump"], [-45, 0, -39, "pineA"], [-29, 0, -31, "bushA"], [-15, 0, -37, "tallGrass"],
-  [-2, 0, -29, "twistedTreeA"], [14, 0, -40, "pineB"], [21, 0, -30, "fern"], [40, 0, -37, "birchTrees"], [55, 0, -32, "bushB"],
+  [-56, 0, -35, "treeStump"], [-29, 0, -31, "bushA"], [-15, 0, -37, "tallGrass"],
+  [14, 0, -40, "pineB"], [21, 0, -30, "fern"], [40, 0, -37, "birchTrees"], [55, 0, -32, "bushB"],
   [-52, 0, -17, "mossyLog"], [-37, 0, -9, "treesCluster"], [-23, 0, -18, "tallGrass"], [-6, 0, -12, "pineC"],
   [11, 0, -16, "resourceGold"], [27, 0, -9, "twistedTreeB"], [35, 0, -18, "bushA"], [50, 0, -11, "treeStump"],
   [-57, 0, 5, "pineB"], [-42, 0, 11, "fern"], [-21, 0, 3, "birchTrees"], [-6, 0, 12, "bushB"],
@@ -242,10 +242,6 @@ const MISTBOS_WORLD_PLACEMENTS = [
 
 const MISTBOS_STRUCTURE_PLACEMENTS = [
   ["fantasySawmill", -2, -1.2, -36, 1.16, Math.PI * 0.08],
-  ["bonfire", 27, -0.2, 33, 1.12, 0],
-  ["tentO", 27, -0.2, 24, 1.18, Math.PI, "forest"],
-  ["tentO", 34.8, -0.2, 37.5, 1.18, -Math.PI * 0.66, "ocean"],
-  ["tentO", 19.2, -0.2, 37.5, 1.18, Math.PI * 0.66, "crimson"],
 ];
 
 const MISTBOS_PREVIEW_PLACEMENTS = [
