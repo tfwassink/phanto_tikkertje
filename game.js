@@ -81,6 +81,7 @@ const COLORABLE_DISGUISE_KINDS = new Set([
   "birchTrees", "treesCluster", "fern", "mossyLog", "bushB", "resourceGold",
   "twistedTreeB", "pineC",
 ]);
+const NON_DISGUISE_KINDS = new Set(["fantasySawmill"]);
 const DISGUISE_COLOR_PRESETS = [
   { id: "sunset", label: "Zon", color: "#f09b41", accent: "#ffd272", materialNames: ["leaves", "leaf", "bush", "grass"] },
   { id: "mint", label: "Munt", color: "#4fbf84", accent: "#9df0c4", materialNames: ["leaves", "leaf", "bush", "grass"] },
@@ -440,6 +441,9 @@ function getDisguiseColorPreset(colorId) {
 }
 
 function canCustomizeDisguise(kind) {
+  if (NON_DISGUISE_KINDS.has(kind)) {
+    return false;
+  }
   return COLORABLE_DISGUISE_KINDS.has(kind) || kind.endsWith("O");
 }
 
