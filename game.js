@@ -78,7 +78,9 @@ const NON_DISGUISE_KINDS = new Set(["fantasySawmill", "bonfire"]);
 const DISGUISE_COLOR_PRESETS = [
   { id: "sunset", label: "Zon", color: "#f09b41", accent: "#ffd272", materialNames: ["leaves", "leaf", "bush", "grass"] },
   { id: "mint", label: "Munt", color: "#4fbf84", accent: "#9df0c4", materialNames: ["leaves", "leaf", "bush", "grass"] },
+  { id: "forest", label: "Bos", color: "#285d3d", accent: "#5ea176", materialNames: ["leaves", "leaf", "bush", "grass"] },
   { id: "ocean", label: "Oceaan", color: "#3d84d9", accent: "#87c8ff", materialNames: ["leaves", "leaf", "bush", "grass"] },
+  { id: "crimson", label: "Rood", color: "#a32929", accent: "#e56a6a", materialNames: ["leaves", "leaf", "bush", "grass"] },
   { id: "violet", label: "Paars", color: "#8b5cf0", accent: "#d2b3ff", materialNames: ["leaves", "leaf", "bush", "grass"] },
   { id: "rose", label: "Roze", color: "#d4578f", accent: "#ffb9d3", materialNames: ["leaves", "leaf", "bush", "grass"] },
   { id: "ember", label: "Gloed", color: "#b85a30", accent: "#f0b46c", materialNames: ["leaves", "leaf", "bush", "grass"] },
@@ -241,9 +243,9 @@ const MISTBOS_WORLD_PLACEMENTS = [
 const MISTBOS_STRUCTURE_PLACEMENTS = [
   ["fantasySawmill", -2, -1.2, -36, 1.16, Math.PI * 0.08],
   ["bonfire", 27, -0.2, 33, 1.12, 0],
-  ["tentO", 27, -0.2, 24, 1.18, Math.PI, "sunset"],
+  ["tentO", 27, -0.2, 24, 1.18, Math.PI, "forest"],
   ["tentO", 34.8, -0.2, 37.5, 1.18, -Math.PI * 0.66, "ocean"],
-  ["tentO", 19.2, -0.2, 37.5, 1.18, Math.PI * 0.66, "mint"],
+  ["tentO", 19.2, -0.2, 37.5, 1.18, Math.PI * 0.66, "crimson"],
 ];
 
 const MISTBOS_PREVIEW_PLACEMENTS = [
