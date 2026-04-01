@@ -9,6 +9,7 @@ const menuButton = document.getElementById("menuButton");
 const closeMenuButton = document.getElementById("closeMenuButton");
 const modelViewerButton = document.getElementById("modelViewerButton");
 const startMapButton = document.getElementById("startMapButton");
+const exploreMapButton = document.getElementById("exploreMapButton");
 const closeViewerButton = document.getElementById("closeViewerButton");
 const tutorialButton = document.getElementById("tutorialButton");
 const menuOverlay = document.getElementById("menuOverlay");
@@ -21,6 +22,9 @@ const summaryText = document.getElementById("summaryText");
 const summaryStats = document.getElementById("summaryStats");
 const playAgainButton = document.getElementById("playAgainButton");
 const summaryMenuButton = document.getElementById("summaryMenuButton");
+const colorWheelOverlay = document.getElementById("colorWheelOverlay");
+const colorWheel = document.getElementById("colorWheel");
+const colorWheelHint = document.getElementById("colorWheelHint");
 const mapButtons = [...document.querySelectorAll(".map-card")];
 const modelPreviewButtons = [...document.querySelectorAll(".viewer-chip")];
 const hudTitle = document.getElementById("hudTitle");
@@ -61,14 +65,31 @@ scene.add(viewerLightRig);
 scene.add(mapPreviewRoot);
 
 const world = {
-  width: 140,
-  depth: 100,
+  width: 184,
+  depth: 132,
 };
 
 const SEEKER_VIEW_DISTANCE = 32;
 const DISGUISE_STILL_SPEED = 0.02;
 const JUMP_SPEED = 10.5;
 const GRAVITY = 28;
+const COLOR_WHEEL_RADIUS = 122;
+const COLORABLE_DISGUISE_KINDS = new Set([
+  "crate", "barrel", "bush", "lamp", "statue",
+  "forestNature", "forestWalk", "forestPond", "forestBlock", "fallTree",
+  "treeStump", "bushA", "pineA", "tallGrass", "twistedTreeA", "pineB",
+  "birchTrees", "treesCluster", "fern", "mossyLog", "bushB", "resourceGold",
+  "twistedTreeB", "pineC",
+]);
+const DISGUISE_COLOR_PRESETS = [
+  { id: "sunset", label: "Zon", color: "#f09b41", accent: "#ffd272", materialNames: ["leaves", "leaf", "bush", "grass"] },
+  { id: "mint", label: "Munt", color: "#4fbf84", accent: "#9df0c4", materialNames: ["leaves", "leaf", "bush", "grass"] },
+  { id: "ocean", label: "Oceaan", color: "#3d84d9", accent: "#87c8ff", materialNames: ["leaves", "leaf", "bush", "grass"] },
+  { id: "violet", label: "Paars", color: "#8b5cf0", accent: "#d2b3ff", materialNames: ["leaves", "leaf", "bush", "grass"] },
+  { id: "rose", label: "Roze", color: "#d4578f", accent: "#ffb9d3", materialNames: ["leaves", "leaf", "bush", "grass"] },
+  { id: "ember", label: "Gloed", color: "#b85a30", accent: "#f0b46c", materialNames: ["leaves", "leaf", "bush", "grass"] },
+];
+const DISGUISE_COLOR_BY_ID = Object.fromEntries(DISGUISE_COLOR_PRESETS.map((preset) => [preset.id, preset]));
 
 const state = {
   currentMap: "plaza",
@@ -104,6 +125,7 @@ const state = {
     mode: "model",
     currentModel: "seeker",
   },
+  disguiseWheelOpen: false,
 };
 
 const seeker = {
@@ -119,6 +141,20 @@ const seeker = {
   jumpVelocity: 0,
 };
 
+const explorer = {
+  mesh: null,
+  speed: 13,
+  radius: 1.6,
+  facing: new THREE.Vector3(0, 0, 1),
+  jumpHeight: 0,
+  jumpVelocity: 0,
+  lastMoveAmount: 0,
+  disguisedAs: null,
+  disguisePartPath: null,
+  disguiseMesh: null,
+  disguiseColorId: DISGUISE_COLOR_PRESETS[0].id,
+};
+
 const hiders = [];
 const props = [];
 const puzzles = [];
@@ -127,10 +163,11 @@ const clouds = [];
 const mountainMeshes = [];
 const decorativeClouds = [];
 const villaDoors = [];
+const worldDisguiseTargets = [];
 
 const modelAssets = {
   seeker: { path: "assets/models/character-animated.glb", desiredHeight: 5.7, rotationY: 0, scene: null, size: null, center: null },
-  hiderHuman: { path: "assets/models/adventurer.glb", desiredHeight: 5.9, rotationY: 0, scene: null, size: null, center: null },
+  hiderHuman: { path: "assets/models/hamster.glb", desiredHeight: 2.8, rotationY: 0, scene: null, size: null, center: null },
   seekerMask: { path: "assets/models/mask.glb", desiredHeight: 2.2, rotationY: Math.PI, scene: null, size: null, center: null },
   villaHouse: { path: "assets/models/villa-house.glb", desiredHeight: 28, rotationY: Math.PI, scene: null, size: null, center: null },
   forestNature: { path: "assets/models/forest-nature.glb", desiredHeight: 20, rotationY: 0, scene: null, size: null, center: null },
@@ -138,6 +175,21 @@ const modelAssets = {
   forestPond: { path: "assets/models/forest-pond.glb", desiredHeight: 10, rotationY: 0, scene: null, size: null, center: null },
   forestBlock: { path: "assets/models/forest-block.glb", desiredHeight: 12, rotationY: 0, scene: null, size: null, center: null },
   fallTree: { path: "assets/models/fall-tree.glb", desiredHeight: 14, rotationY: 0, scene: null, size: null, center: null },
+  treeStump: { path: "assets/models/poly-forest/tree-stump.glb", desiredHeight: 2.4, rotationY: 0, scene: null, size: null, center: null },
+  bushA: { path: "assets/models/poly-forest/bush-a.glb", desiredHeight: 3.2, rotationY: 0, scene: null, size: null, center: null },
+  pineA: { path: "assets/models/poly-forest/pine-a.glb", desiredHeight: 22, rotationY: 0, scene: null, size: null, center: null },
+  tallGrass: { path: "assets/models/poly-forest/tall-grass.glb", desiredHeight: 2.8, rotationY: 0, scene: null, size: null, center: null },
+  twistedTreeA: { path: "assets/models/poly-forest/twisted-tree-a.glb", desiredHeight: 19, rotationY: 0, scene: null, size: null, center: null },
+  pineB: { path: "assets/models/poly-forest/pine-b.glb", desiredHeight: 24, rotationY: 0, scene: null, size: null, center: null },
+  birchTrees: { path: "assets/models/poly-forest/birch-trees.glb", desiredHeight: 18.5, rotationY: 0, scene: null, size: null, center: null },
+  treesCluster: { path: "assets/models/poly-forest/trees-cluster.glb", desiredHeight: 20, rotationY: 0, scene: null, size: null, center: null },
+  fern: { path: "assets/models/poly-forest/fern.glb", desiredHeight: 2.6, rotationY: 0, scene: null, size: null, center: null },
+  mossyLog: { path: "assets/models/poly-forest/mossy-log.glb", desiredHeight: 2.2, rotationY: 0, scene: null, size: null, center: null },
+  bushB: { path: "assets/models/poly-forest/bush-b.glb", desiredHeight: 3.4, rotationY: 0, scene: null, size: null, center: null },
+  resourceGold: { path: "assets/models/poly-forest/resource-gold.glb", desiredHeight: 3.6, rotationY: 0, scene: null, size: null, center: null },
+  twistedTreeB: { path: "assets/models/poly-forest/twisted-tree-b.glb", desiredHeight: 19.5, rotationY: 0, scene: null, size: null, center: null },
+  pineC: { path: "assets/models/poly-forest/pine-c.glb", desiredHeight: 23, rotationY: 0, scene: null, size: null, center: null },
+  fantasySawmill: { path: "assets/models/fantasy-sawmill.glb", desiredHeight: 12.5, rotationY: 0, scene: null, size: null, center: null },
   crate: { path: "assets/models/crate.glb", desiredHeight: 3.6, rotationY: 0, scene: null, size: null, center: null },
   barrel: { path: "assets/models/barrel.glb", desiredHeight: 4.4, rotationY: 0, scene: null, size: null, center: null },
   bush: { path: "assets/models/bush.glb", desiredHeight: 3.1, rotationY: 0, scene: null, size: null, center: null },
@@ -156,7 +208,58 @@ const propTypes = {
   forestPond: { color: "#5ea8d6", accent: "#7dcaf3", radius: 4.9, scale: [8.4, 3.2, 8.4] },
   forestBlock: { color: "#65804a", accent: "#8fb26f", radius: 4.6, scale: [7.8, 7.8, 7.8] },
   fallTree: { color: "#9f5f29", accent: "#d98b37", radius: 3.3, scale: [5.8, 10.5, 5.8] },
+  treeStump: { color: "#685340", accent: "#8e775f", radius: 1.8, scale: [2.4, 1.8, 2.4] },
+  bushA: { color: "#567144", accent: "#7ba164", radius: 2.5, scale: [3.6, 2.8, 3.6] },
+  pineA: { color: "#496544", accent: "#678d5a", radius: 4.4, scale: [7.2, 21, 7.2] },
+  tallGrass: { color: "#6f8a53", accent: "#97b56f", radius: 1.4, scale: [2.8, 2.4, 2.8] },
+  twistedTreeA: { color: "#5d4837", accent: "#6f8a59", radius: 4.2, scale: [6.1, 18.6, 6.1] },
+  pineB: { color: "#3c5641", accent: "#5c8057", radius: 4.8, scale: [7.5, 22.5, 7.5] },
+  birchTrees: { color: "#8e9a88", accent: "#5d815b", radius: 4.8, scale: [8.8, 18.5, 8.8] },
+  treesCluster: { color: "#55744e", accent: "#7a9e6c", radius: 5.1, scale: [9.1, 20, 9.1] },
+  fern: { color: "#678750", accent: "#91b671", radius: 1.9, scale: [3.1, 2.6, 3.1] },
+  mossyLog: { color: "#6d5a46", accent: "#6f8e5f", radius: 2.7, scale: [4.6, 1.9, 2.8] },
+  bushB: { color: "#60764a", accent: "#88a764", radius: 2.8, scale: [3.8, 3, 3.8] },
+  resourceGold: { color: "#9b7b2d", accent: "#f0d66b", radius: 2.1, scale: [2.8, 3.4, 2.8] },
+  twistedTreeB: { color: "#594436", accent: "#6a8758", radius: 4.1, scale: [5.9, 19.2, 5.9] },
+  pineC: { color: "#3e5943", accent: "#5d7b52", radius: 4.7, scale: [7.3, 22, 7.3] },
 };
+
+const MISTBOS_PROP_LAYOUT = [
+  [-56, 0, -35, "treeStump"], [-45, 0, -39, "pineA"], [-29, 0, -31, "bushA"], [-15, 0, -37, "tallGrass"],
+  [-2, 0, -29, "twistedTreeA"], [14, 0, -40, "pineB"], [21, 0, -30, "fern"], [40, 0, -37, "birchTrees"], [55, 0, -32, "bushB"],
+  [-52, 0, -17, "mossyLog"], [-37, 0, -9, "treesCluster"], [-23, 0, -18, "tallGrass"], [-6, 0, -12, "pineC"],
+  [11, 0, -16, "resourceGold"], [27, 0, -9, "twistedTreeB"], [35, 0, -18, "bushA"], [50, 0, -11, "treeStump"],
+  [-57, 0, 5, "pineB"], [-42, 0, 11, "fern"], [-21, 0, 3, "birchTrees"], [-6, 0, 12, "bushB"],
+  [10, 0, 4, "tallGrass"], [23, 0, 13, "pineA"], [33, 0, 1, "mossyLog"], [55, 0, 9, "bushA"],
+  [-48, 0, 24, "twistedTreeA"], [-31, 0, 35, "pineC"], [-12, 0, 22, "treeStump"], [3, 0, 31, "treesCluster"],
+  [18, 0, 25, "fern"], [34, 0, 34, "twistedTreeB"], [47, 0, 27, "bushB"],
+];
+
+const MISTBOS_WORLD_PLACEMENTS = [
+  ["pineB", -60, -24, 1.26], ["pineA", -47, 29, 1.22], ["pineC", 57, -18, 1.28], ["treesCluster", 51, 23, 1.2],
+  ["twistedTreeA", -31, 20, 1.18], ["twistedTreeB", 29, 20, 1.12], ["birchTrees", -4, -42, 1.24], ["birchTrees", 11, 40, 1.16],
+  ["mossyLog", -10, 33, 1.14], ["treeStump", 19, -30, 1.18], ["bushA", -24, -28, 1.08], ["bushB", 36, -27, 1.06],
+  ["fern", -38, 4, 1.26], ["fern", 42, 8, 1.22], ["tallGrass", -7, 23, 1.32], ["tallGrass", 7, -24, 1.32],
+];
+
+const MISTBOS_STRUCTURE_PLACEMENTS = [
+  ["fantasySawmill", -2, -1.2, -36, 1.16, Math.PI * 0.08],
+];
+
+const MISTBOS_PREVIEW_PLACEMENTS = [
+  ["pineA", -10, -5, 0.2],
+  ["birchTrees", 8, -1, 0.18],
+  ["mossyLog", 1, 10, 0.24],
+  ["treeStump", -2, 8, 0.24],
+  ["fern", 12, 10, 0.24],
+];
+
+const PARTIAL_DISGUISE_KINDS = new Set(["birchTrees", "treesCluster"]);
+const MISTBOS_TREE_KINDS = new Set(["pineA", "pineB", "pineC", "twistedTreeA", "twistedTreeB", "birchTrees", "treesCluster"]);
+const MISTBOS_ORGANIC_KINDS = new Set([
+  "treeStump", "bushA", "bushB", "tallGrass", "fern", "mossyLog",
+  "pineA", "pineB", "pineC", "twistedTreeA", "twistedTreeB", "birchTrees", "treesCluster",
+]);
 
 const mapConfigs = {
   plaza: {
@@ -193,32 +296,33 @@ const mapConfigs = {
   },
   garden: {
     name: "Mistbos",
-    sky: "#d4e2d3",
-    fog: "#cbdcc7",
-    groundA: "#7d9a62",
-    groundB: "#5f764c",
-    mountain: "#4f6444",
+    sky: "#a8bbb1",
+    fog: "#c0d0c7",
+    fogNear: 26,
+    fogFar: 112,
+    ambientSky: "#edf7f1",
+    ambientGround: "#334238",
+    ambientIntensity: 1.55,
+    sunColor: "#f5fffb",
+    sunIntensity: 1.18,
+    groundA: "#526b58",
+    groundB: "#39493d",
+    mountain: "#24342e",
     timeLimit: 165,
     puzzlePenalty: 14,
-    seekerSpawn: [0, 0, 34],
+    seekerSpawn: [0, 0, 44],
     hiderSpawns: [
-      [-34, 0, -28],
-      [34, 0, -24],
-      [0, 0, -34],
+      [-46, 0, -38],
+      [44, 0, -32],
+      [8, 0, -42],
     ],
-    props: [
-      [-48, 0, -32, "forestNature"], [-30, 0, -34, "fallTree"], [-8, 0, -34, "forestBlock"], [15, 0, -34, "forestNature"],
-      [40, 0, -31, "fallTree"], [-52, 0, -10, "forestBlock"], [-30, 0, -10, "forestWalk"], [-6, 0, -11, "forestNature"],
-      [22, 0, -9, "fallTree"], [46, 0, -8, "forestBlock"], [-46, 0, 10, "forestNature"], [-18, 0, 9, "forestPond"],
-      [12, 0, 10, "forestWalk"], [38, 0, 12, "forestNature"], [-38, 0, 32, "fallTree"], [-14, 0, 33, "forestBlock"],
-      [11, 0, 32, "forestNature"], [37, 0, 34, "fallTree"], [0, 0, -24, "forestPond"], [0, 0, 24, "forestPond"],
-    ],
+    props: MISTBOS_PROP_LAYOUT,
     puzzles: [
-      [-30, 0, -18],
-      [30, 0, -14],
-      [0, 0, 0],
-      [-20, 0, 22],
-      [22, 0, 24],
+      [-42, 0, -26],
+      [38, 0, -20],
+      [2, 0, -4],
+      [-24, 0, 24],
+      [30, 0, 28],
     ],
   },
 };
@@ -289,6 +393,54 @@ function stylizeHumanModel(root, tint) {
       }
     });
   });
+}
+
+function cloneMaterialWithColor(material, tintColor, accentColor, options = {}) {
+  if (!material || !("color" in material)) {
+    return material;
+  }
+
+  const clone = material.clone();
+  const tint = new THREE.Color(tintColor);
+  const accent = new THREE.Color(accentColor || tintColor);
+  const materialName = (clone.name || "").toLowerCase();
+  const useAccent = (options.materialNames || []).some((name) => materialName.includes(name));
+
+  clone.color = clone.color.clone().lerp(useAccent ? accent : tint, useAccent ? 0.75 : 0.6);
+  if ("emissive" in clone && clone.emissive) {
+    clone.emissive = clone.emissive.clone().lerp(accent, 0.28);
+    clone.emissiveIntensity = Math.max(clone.emissiveIntensity || 0, 0.08);
+  }
+  if ("roughness" in clone) {
+    clone.roughness = clamp((clone.roughness || 0.7) * 0.94, 0.15, 1);
+  }
+  return clone;
+}
+
+function applyTintToMesh(root, preset) {
+  if (!root || !preset) {
+    return;
+  }
+
+  root.traverse((child) => {
+    if (!child.isMesh || !child.material) {
+      return;
+    }
+
+    if (Array.isArray(child.material)) {
+      child.material = child.material.map((material) => cloneMaterialWithColor(material, preset.color, preset.accent, preset));
+    } else {
+      child.material = cloneMaterialWithColor(child.material, preset.color, preset.accent, preset);
+    }
+  });
+}
+
+function getDisguiseColorPreset(colorId) {
+  return DISGUISE_COLOR_BY_ID[colorId] || DISGUISE_COLOR_PRESETS[0];
+}
+
+function canCustomizeDisguise(kind) {
+  return COLORABLE_DISGUISE_KINDS.has(kind) || kind.endsWith("O");
 }
 
 function stylizeVillaModel(root) {
@@ -413,7 +565,7 @@ function refreshImportedVisuals() {
 
   hiders.forEach((hider) => {
     if (hider.disguisedAs) {
-      applyDisguise(hider, hider.disguisedAs);
+      applyDisguise(hider, hider.disguisedAs, { partPath: hider.disguisePartPath });
     }
   });
 
@@ -429,10 +581,10 @@ function refreshImportedVisuals() {
   }
 }
 
-function findPropFromObject(object) {
+function findDisguiseTargetFromObject(object) {
   let current = object;
   while (current) {
-    const match = props.find((prop) => prop.mesh === current);
+    const match = props.find((prop) => prop.mesh === current) || worldDisguiseTargets.find((target) => target.mesh === current);
     if (match) {
       return match;
     }
@@ -641,6 +793,10 @@ function advanceTutorialStage(nextStage) {
 }
 
 function updateRoleButton() {
+  if (state.mode === "explore") {
+    roleButton.textContent = "Bestuur: Verkenner";
+    return;
+  }
   roleButton.textContent = state.controlMode === "seeker" ? "Bestuur: Tikker" : "Bestuur: Verstopper";
 }
 
@@ -659,11 +815,13 @@ function activeHiders() {
 }
 
 function updateHud() {
-  hudTitle.textContent = state.running ? `Tijd: ${Math.max(0, Math.ceil(state.timeLeft))}` : "Tijd: --";
+  hudTitle.textContent = state.mode === "explore"
+    ? "Vrij Verkennen"
+    : state.running ? `Tijd: ${Math.max(0, Math.ceil(state.timeLeft))}` : "Tijd: --";
   hudMap.textContent = `Map: ${state.mapName}`;
-  hudRole.textContent = `Bestuurd: ${state.controlMode === "seeker" ? "Tikker" : "Verstopper"}`;
-  hudPlayers.textContent = `Spelers: ${1 + hiders.length}`;
-  hudPuzzles.textContent = `Puzzels nog te doen: ${puzzles.filter((puzzle) => !puzzle.solved).length}`;
+  hudRole.textContent = `Bestuurd: ${state.mode === "explore" ? "Verkenner" : state.controlMode === "seeker" ? "Tikker" : "Verstopper"}`;
+  hudPlayers.textContent = state.mode === "explore" ? "Spelers: 0" : `Spelers: ${1 + hiders.length}`;
+  hudPuzzles.textContent = state.mode === "explore" ? "Puzzels: uit" : `Puzzels nog te doen: ${puzzles.filter((puzzle) => !puzzle.solved).length}`;
   hudMessage.textContent = state.mode === "tutorial" ? tutorialMessage() : state.message;
 }
 
@@ -674,6 +832,138 @@ function clearGameplay() {
   hiders.length = 0;
   shots.length = 0;
   clouds.length = 0;
+  explorer.mesh = null;
+}
+
+function displayPropName(kind) {
+  const names = {
+    crate: "krat",
+    barrel: "ton",
+    bush: "struik",
+    lamp: "lamp",
+    statue: "standbeeld",
+    forestNature: "bosgroep",
+    forestWalk: "bospad",
+    forestPond: "vijver",
+    forestBlock: "rotsblok",
+    fallTree: "herfstboom",
+    treeStump: "boomstronk",
+    bushA: "struik",
+    pineA: "den",
+    tallGrass: "hoog gras",
+    twistedTreeA: "scheve boom",
+    pineB: "grote den",
+    birchTrees: "berken",
+    treesCluster: "boomgroep",
+    fern: "varen",
+    mossyLog: "mosstam",
+    bushB: "struik",
+    resourceGold: "goudsteen",
+    twistedTreeB: "scheve boom",
+    pineC: "mistden",
+  };
+  return names[kind] || kind;
+}
+
+function getObjectPathFromAncestor(root, object) {
+  if (!root || !object) {
+    return null;
+  }
+
+  const path = [];
+  let current = object;
+  while (current && current !== root) {
+    const parent = current.parent;
+    if (!parent) {
+      return null;
+    }
+    const index = parent.children.indexOf(current);
+    if (index < 0) {
+      return null;
+    }
+    path.unshift(index);
+    current = parent;
+  }
+
+  return current === root ? path : null;
+}
+
+function resolveObjectPath(root, path) {
+  if (!root || !Array.isArray(path)) {
+    return null;
+  }
+
+  let current = root;
+  for (const index of path) {
+    current = current?.children?.[index] || null;
+    if (!current) {
+      return null;
+    }
+  }
+  return current;
+}
+
+function getDisguiseSelectionNode(root, hitObject) {
+  if (!root || !hitObject) {
+    return null;
+  }
+
+  let current = hitObject;
+  while (current && current.parent && current.parent !== root) {
+    if (current.parent.parent === root) {
+      return current;
+    }
+    current = current.parent;
+  }
+
+  return current && current !== root ? current : null;
+}
+
+function createPartialDisguiseMesh(kind, options = {}) {
+  if (!PARTIAL_DISGUISE_KINDS.has(kind)) {
+    return null;
+  }
+
+  let sourceRoot = options.targetMesh || null;
+  let partPath = Array.isArray(options.partPath) ? options.partPath : null;
+
+  if (!sourceRoot) {
+    sourceRoot = createAssetInstance(kind);
+  }
+  if (!sourceRoot) {
+    return null;
+  }
+
+  let selection = partPath ? resolveObjectPath(sourceRoot, partPath) : null;
+  if (!selection) {
+    selection = getDisguiseSelectionNode(sourceRoot, options.hitObject);
+    partPath = getObjectPathFromAncestor(sourceRoot, selection);
+  }
+  if (!selection) {
+    return null;
+  }
+
+  const clone = cloneSkinned(selection);
+  prepareImportedModel(clone);
+
+  const worldPosition = new THREE.Vector3();
+  const worldQuaternion = new THREE.Quaternion();
+  const worldScale = new THREE.Vector3();
+  selection.updateWorldMatrix(true, true);
+  selection.matrixWorld.decompose(worldPosition, worldQuaternion, worldScale);
+
+  clone.position.copy(worldPosition);
+  clone.quaternion.copy(worldQuaternion);
+  clone.scale.copy(worldScale);
+
+  const wrapper = new THREE.Group();
+  const bounds = getRenderableBounds(clone);
+  const center = bounds.getCenter(new THREE.Vector3());
+  clone.position.sub(new THREE.Vector3(center.x, bounds.min.y, center.z));
+  wrapper.add(clone);
+  wrapper.userData.kind = kind;
+
+  return { mesh: wrapper, partPath };
 }
 
 function createCharacter(color, isSeeker = false) {
@@ -781,6 +1071,7 @@ function createPropMesh(kind) {
   if (importedModel) {
     importedModel.position.y = 0;
     importedModel.userData.kind = kind;
+    importedModel.userData.baseKind = kind;
     return importedModel;
   }
 
@@ -887,7 +1178,127 @@ function createPropMesh(kind) {
   mainMesh.position.y = kind === "lamp" ? 0 : config.scale[1] * 0.5;
   group.add(mainMesh);
   group.userData.kind = kind;
+  group.userData.baseKind = kind;
   return group;
+}
+
+function tintPropMesh(mesh, kind, colorId) {
+  if (!mesh || !canCustomizeDisguise(kind)) {
+    return;
+  }
+
+  const preset = getDisguiseColorPreset(colorId);
+  applyTintToMesh(mesh, preset);
+  mesh.userData.disguiseColorId = preset.id;
+}
+
+function colorPresetForWorldProp(kind, index) {
+  if (!canCustomizeDisguise(kind)) {
+    return null;
+  }
+  return DISGUISE_COLOR_PRESETS[index % DISGUISE_COLOR_PRESETS.length];
+}
+
+function buildColorWheel() {
+  colorWheel.innerHTML = "";
+
+  DISGUISE_COLOR_PRESETS.forEach((preset, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "color-wheel-option";
+    button.dataset.colorId = preset.id;
+    button.setAttribute("role", "listitem");
+    button.setAttribute("aria-label", preset.label);
+    button.style.background = `radial-gradient(circle at 35% 30%, ${preset.accent}, ${preset.color})`;
+
+    const angle = (Math.PI * 2 * index) / DISGUISE_COLOR_PRESETS.length - Math.PI / 2;
+    const x = Math.cos(angle) * COLOR_WHEEL_RADIUS;
+    const y = Math.sin(angle) * COLOR_WHEEL_RADIUS;
+    button.style.setProperty("--wheel-x", `${x}px`);
+    button.style.setProperty("--wheel-y", `${y}px`);
+    button.innerHTML = `<span>${preset.label}</span>`;
+    colorWheel.append(button);
+  });
+}
+
+function activeDisguiseActor() {
+  if (!state.running || state.controlMode !== "hider") {
+    return null;
+  }
+
+  if (menuOverlay.classList.contains("visible") || summaryOverlay.classList.contains("visible")) {
+    return null;
+  }
+
+  const actor = state.mode === "explore" ? explorer : getPlayerHider();
+  if (!actor?.disguisedAs || !actor.disguiseMesh) {
+    return null;
+  }
+
+  return actor;
+}
+
+function syncColorWheelSelection(colorId) {
+  [...colorWheel.querySelectorAll(".color-wheel-option")].forEach((button) => {
+    const isActive = button.dataset.colorId === colorId;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+function openDisguiseColorWheel() {
+  const actor = activeDisguiseActor();
+  if (!actor || !canCustomizeDisguise(actor.disguisedAs)) {
+    state.message = "Deze vermomming heeft nu nog geen kleurkeuzes.";
+    updateHud();
+    return;
+  }
+
+  state.disguiseWheelOpen = true;
+  colorWheelOverlay.classList.add("visible");
+  colorWheelHint.textContent = `Kies een kleur voor je ${displayPropName(actor.disguisedAs)}.`;
+  syncColorWheelSelection(actor.disguiseColorId || DISGUISE_COLOR_PRESETS[0].id);
+}
+
+function closeDisguiseColorWheel() {
+  state.disguiseWheelOpen = false;
+  colorWheelOverlay.classList.remove("visible");
+}
+
+function setActorDisguiseColor(actor, colorId) {
+  if (!actor?.disguiseMesh || !actor.disguisedAs || !canCustomizeDisguise(actor.disguisedAs)) {
+    return;
+  }
+
+  const nextColorId = getDisguiseColorPreset(colorId).id;
+  actor.disguiseColorId = nextColorId;
+  applyDisguise(actor, actor.disguisedAs, { partPath: actor.disguisePartPath, colorId: nextColorId });
+  state.message = `Vermomming aangepast naar ${getDisguiseColorPreset(nextColorId).label.toLowerCase()}.`;
+  updateHud();
+}
+
+function applyMistbosPropVariation(mesh, kind, index) {
+  if (!mesh || !MISTBOS_ORGANIC_KINDS.has(kind)) {
+    return;
+  }
+
+  const spinSeed = Math.sin((index + 1) * 12.9898) * 43758.5453;
+  const scaleSeed = Math.sin((index + 1) * 78.233) * 43758.5453;
+  const jitterSeed = Math.sin((index + 1) * 43.531) * 43758.5453;
+  const spinNoise = spinSeed - Math.floor(spinSeed);
+  const scaleNoise = scaleSeed - Math.floor(scaleSeed);
+  const jitterNoise = jitterSeed - Math.floor(jitterSeed);
+
+  mesh.rotation.y = spinNoise * Math.PI * 2;
+
+  let scale = 0.92 + scaleNoise * 0.22;
+  if (MISTBOS_TREE_KINDS.has(kind)) {
+    scale = 1.08 + scaleNoise * 0.32;
+  }
+  mesh.scale.multiplyScalar(scale);
+
+  mesh.position.x += (jitterNoise - 0.5) * (MISTBOS_TREE_KINDS.has(kind) ? 1.9 : 1.1);
+  mesh.position.z += (spinNoise - 0.5) * (MISTBOS_TREE_KINDS.has(kind) ? 1.7 : 1);
 }
 
 function createHedge(width, depth, height = 3.1) {
@@ -1153,6 +1564,15 @@ function createPuzzle(position, index) {
   ring.rotation.x = Math.PI / 2;
   ring.position.y = 1.35;
 
+  if (state.currentMap === "garden") {
+    const forestMarker = createAssetInstance("resourceGold");
+    if (forestMarker) {
+      forestMarker.position.y = 1.05;
+      forestMarker.scale.multiplyScalar(0.82);
+      group.add(forestMarker);
+    }
+  }
+
   group.add(base, core, ring);
   group.position.copy(position);
   group.userData.core = core;
@@ -1242,7 +1662,9 @@ function createHider(index, position, color, control) {
     control,
     out: false,
     disguisedAs: null,
+    disguisePartPath: null,
     disguiseMesh: null,
+    disguiseColorId: DISGUISE_COLOR_PRESETS[index % DISGUISE_COLOR_PRESETS.length].id,
     facing: new THREE.Vector3(1, 0, 0),
     moveTarget: position.clone(),
     aiTimer: rand(1.2, 3.2),
@@ -1274,31 +1696,50 @@ function clearDisguise(hider) {
     hider.disguiseMesh = null;
   }
   hider.disguisedAs = null;
+  hider.disguisePartPath = null;
+  if (state.disguiseWheelOpen) {
+    const activeActor = state.mode === "explore" ? explorer : getPlayerHider();
+    if (activeActor === hider) {
+      closeDisguiseColorWheel();
+    }
+  }
   setCharacterVisible(hider, true);
 }
 
-function applyDisguise(hider, kind) {
+function applyDisguise(hider, kind, options = {}) {
   clearDisguise(hider);
-  const disguise = createPropMesh(kind);
+  const partialDisguise = createPartialDisguiseMesh(kind, options);
+  const disguise = partialDisguise?.mesh || createPropMesh(kind);
+  const colorId = options.colorId || hider.disguiseColorId || DISGUISE_COLOR_PRESETS[0].id;
   disguise.position.set(0, 0, 0);
+  if (canCustomizeDisguise(kind)) {
+    tintPropMesh(disguise, kind, colorId);
+  }
   hider.mesh.add(disguise);
   hider.disguiseMesh = disguise;
   hider.disguisedAs = kind;
+  hider.disguisePartPath = partialDisguise?.partPath || null;
+  hider.disguiseColorId = colorId;
   setCharacterVisible(hider, false);
 }
 
 function createWorldDecor(config) {
   scene.background = new THREE.Color(config.sky);
-  scene.fog = new THREE.Fog(config.fog, 65, 180);
+  scene.fog = new THREE.Fog(config.fog, config.fogNear || 65, config.fogFar || 180);
 
   worldRoot.clear();
   mapPreviewRoot.clear();
   mountainMeshes.length = 0;
   decorativeClouds.length = 0;
   villaDoors.length = 0;
+  worldDisguiseTargets.length = 0;
 
-  const ambient = new THREE.HemisphereLight("#fff5d9", "#8f7757", 1.25);
-  const sun = new THREE.DirectionalLight("#fff3c4", 1.8);
+  const ambient = new THREE.HemisphereLight(
+    config.ambientSky || "#fff5d9",
+    config.ambientGround || "#8f7757",
+    config.ambientIntensity || 1.25
+  );
+  const sun = new THREE.DirectionalLight(config.sunColor || "#fff3c4", config.sunIntensity || 1.8);
   sun.position.set(26, 48, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -1318,13 +1759,15 @@ function createWorldDecor(config) {
   ground.receiveShadow = true;
   worldRoot.add(ground);
 
-  const plazaBand = new THREE.Mesh(
-    new THREE.PlaneGeometry(world.width * 0.7, world.depth * 0.45),
-    new THREE.MeshStandardMaterial({ color: config.groundB, roughness: 0.82, transparent: true, opacity: 0.88 })
-  );
-  plazaBand.rotation.x = -Math.PI / 2;
-  plazaBand.position.y = 0.02;
-  worldRoot.add(plazaBand);
+  if (!config.name.includes("Mistbos")) {
+    const plazaBand = new THREE.Mesh(
+      new THREE.PlaneGeometry(world.width * 0.7, world.depth * 0.45),
+      new THREE.MeshStandardMaterial({ color: config.groundB, roughness: 0.82, transparent: true, opacity: 0.88 })
+    );
+    plazaBand.rotation.x = -Math.PI / 2;
+    plazaBand.position.y = 0.02;
+    worldRoot.add(plazaBand);
+  }
 
   for (let index = 0; index < 16; index += 1) {
     const angle = (index / 16) * Math.PI * 2;
@@ -1351,34 +1794,61 @@ function createWorldDecor(config) {
   }
 
   if (config.name.includes("Mistbos")) {
-    const placements = [
-      ["forestNature", -42, -24, 0.88],
-      ["forestWalk", -12, -12, 0.8],
-      ["forestBlock", 22, -18, 0.82],
-      ["forestNature", 42, 4, 0.86],
-      ["forestPond", 0, 20, 0.78],
-      ["fallTree", -28, 26, 1],
-      ["fallTree", 28, 26, 1],
-      ["forestBlock", 0, -36, 0.9],
-    ];
+    const fogSheet = new THREE.Mesh(
+      new THREE.CircleGeometry(58, 48),
+      new THREE.MeshBasicMaterial({ color: "#f4fbf7", transparent: true, opacity: 0.14 })
+    );
+    fogSheet.rotation.x = -Math.PI / 2;
+    fogSheet.position.set(0, 0.18, 0);
+    worldRoot.add(fogSheet);
 
-    placements.forEach(([kind, x, z, scale]) => {
+    const pathSpine = new THREE.Mesh(
+      new THREE.PlaneGeometry(16, 76),
+      new THREE.MeshStandardMaterial({ color: "#6f6552", roughness: 0.98, transparent: true, opacity: 0.58 })
+    );
+    pathSpine.rotation.x = -Math.PI / 2;
+    pathSpine.position.set(0, 0.03, 0);
+    worldRoot.add(pathSpine);
+
+    const sidePath = new THREE.Mesh(
+      new THREE.PlaneGeometry(14, 34),
+      new THREE.MeshStandardMaterial({ color: "#756b56", roughness: 0.98, transparent: true, opacity: 0.52 })
+    );
+    sidePath.rotation.x = -Math.PI / 2;
+    sidePath.rotation.z = Math.PI * 0.32;
+    sidePath.position.set(-16, 0.035, 12);
+    worldRoot.add(sidePath);
+
+    MISTBOS_WORLD_PLACEMENTS.forEach(([kind, x, z, scale]) => {
       const asset = createAssetInstance(kind);
       if (!asset) {
         return;
       }
+      const worldPreset = colorPresetForWorldProp(kind, Math.abs(x) + Math.abs(z));
+      if (worldPreset) {
+        tintPropMesh(asset, kind, worldPreset.id);
+      }
       asset.position.set(x, 0, z);
       asset.scale.multiplyScalar(scale);
       worldRoot.add(asset);
+      worldDisguiseTargets.push({
+        id: `world-${kind}-${x}-${z}`,
+        kind,
+        mesh: asset,
+        radius: propTypes[kind].radius * Math.max(0.85, scale * 0.72),
+      });
     });
 
-    const forestPath = new THREE.Mesh(
-      new THREE.PlaneGeometry(18, 70),
-      new THREE.MeshStandardMaterial({ color: "#8b7855", roughness: 0.94, transparent: true, opacity: 0.74 })
-    );
-    forestPath.rotation.x = -Math.PI / 2;
-    forestPath.position.set(0, 0.03, 0);
-    worldRoot.add(forestPath);
+    MISTBOS_STRUCTURE_PLACEMENTS.forEach(([kind, x, y, z, scale, rotationY]) => {
+      const asset = createAssetInstance(kind);
+      if (!asset) {
+        return;
+      }
+      asset.position.set(x, y, z);
+      asset.scale.multiplyScalar(scale);
+      asset.rotation.y = rotationY || 0;
+      worldRoot.add(asset);
+    });
   }
 }
 
@@ -1408,7 +1878,7 @@ function createMapPreview(mapKey) {
   group.add(accent);
 
   if (mapKey === "garden") {
-    [["forestNature", -10, -6, 0.18], ["forestWalk", 8, -1, 0.17], ["forestPond", 0, 11, 0.16], ["fallTree", 12, 11, 0.22]]
+    MISTBOS_PREVIEW_PLACEMENTS
       .forEach(([kind, x, z, scale]) => {
         const asset = createAssetInstance(kind);
         if (!asset) {
@@ -1418,6 +1888,13 @@ function createMapPreview(mapKey) {
         asset.position.set(x, 0.95, z);
         group.add(asset);
       });
+
+    const previewPath = new THREE.Mesh(
+      new THREE.BoxGeometry(10, 0.2, 24),
+      new THREE.MeshStandardMaterial({ color: "#6e6755", roughness: 0.96 })
+    );
+    previewPath.position.set(0, 0.92, 3);
+    group.add(previewPath);
   } else {
     for (const [x, , z, kind] of config.props.slice(0, 8)) {
       const prop = createPropMesh(kind);
@@ -1478,48 +1955,78 @@ function setupRound(config, mode) {
   };
 
   resetTutorialProgress();
-  state.message = mode === "tutorial" ? tutorialMessage() : "De ronde is gestart. Los puzzels op of jaag de verstoppers op.";
+  state.message = mode === "tutorial"
+    ? tutorialMessage()
+    : mode === "explore"
+      ? "Rustige verkenmodus: loop vrij door de map zonder tikker of verstoppers."
+      : "De ronde is gestart. Los puzzels op of jaag de verstoppers op.";
   createWorldDecor(config);
 
-  seeker.mesh = createCharacter("#7c4a1f", true);
-  seeker.mesh.position.set(...config.seekerSpawn);
-  seeker.mesh.position.y = 0;
-  seeker.facing.set(-1, 0, 0);
-  seeker.jumpHeight = 0;
-  seeker.jumpVelocity = 0;
-  seeker.moveTarget.copy(seeker.mesh.position);
-  seeker.aiCooldown = rand(0.5, 1.2);
-  gameplayRoot.add(seeker.mesh);
+  if (mode === "explore") {
+    explorer.mesh = createCharacter("#8ec5ff", false);
+    explorer.mesh.position.set(...config.seekerSpawn);
+    explorer.mesh.position.y = 0;
+    explorer.jumpHeight = 0;
+    explorer.jumpVelocity = 0;
+    explorer.facing.set(0, 0, 1);
+    explorer.lastMoveAmount = 0;
+    explorer.disguisedAs = null;
+    explorer.disguisePartPath = null;
+    explorer.disguiseMesh = null;
+    gameplayRoot.add(explorer.mesh);
+  } else {
+    seeker.mesh = createCharacter("#7c4a1f", true);
+    seeker.mesh.position.set(...config.seekerSpawn);
+    seeker.mesh.position.y = 0;
+    seeker.facing.set(-1, 0, 0);
+    seeker.jumpHeight = 0;
+    seeker.jumpVelocity = 0;
+    seeker.moveTarget.copy(seeker.mesh.position);
+    seeker.aiCooldown = rand(0.5, 1.2);
+    gameplayRoot.add(seeker.mesh);
 
-  const spawnCount = mode === "tutorial" ? 1 : config.hiderSpawns.length;
-  for (let index = 0; index < spawnCount; index += 1) {
-    const spawn = new THREE.Vector3(...config.hiderSpawns[index]);
-    const color = ["#58b6ff", "#ff7aa2", "#67d66d"][index] || "#8ec5ff";
-    const control = index === 0 ? "player" : "ai";
-    hiders.push(createHider(index, spawn, color, control));
+    const spawnCount = mode === "tutorial" ? 1 : config.hiderSpawns.length;
+    for (let index = 0; index < spawnCount; index += 1) {
+      const spawn = new THREE.Vector3(...config.hiderSpawns[index]);
+      const color = ["#58b6ff", "#ff7aa2", "#67d66d"][index] || "#8ec5ff";
+      const control = index === 0 ? "player" : "ai";
+      hiders.push(createHider(index, spawn, color, control));
+    }
   }
 
   config.props.forEach((entry, index) => {
     const [x, y, z, kind] = entry;
     const mesh = createPropMesh(kind);
+    const worldPreset = colorPresetForWorldProp(kind, index);
+    if (worldPreset) {
+      tintPropMesh(mesh, kind, worldPreset.id);
+    }
     mesh.position.set(x, y, z);
+    if (config.name.includes("Mistbos")) {
+      applyMistbosPropVariation(mesh, kind, index);
+    }
     mesh.userData.propId = `prop-${index}`;
     gameplayRoot.add(mesh);
     props.push({ id: `prop-${index}`, kind, mesh, radius: propTypes[kind].radius });
   });
 
-  const puzzleLayout = mode === "tutorial" ? [config.puzzles[0]] : config.puzzles;
-  puzzleLayout.forEach((coords, index) => {
-    const puzzle = createPuzzle(new THREE.Vector3(...coords), index);
-    puzzles.push(puzzle);
-    gameplayRoot.add(puzzle.mesh);
-  });
+  if (mode !== "explore") {
+    const puzzleLayout = mode === "tutorial" ? [config.puzzles[0]] : config.puzzles;
+    puzzleLayout.forEach((coords, index) => {
+      const puzzle = createPuzzle(new THREE.Vector3(...coords), index);
+      puzzles.push(puzzle);
+      gameplayRoot.add(puzzle.mesh);
+    });
+  }
 
   if (mode === "tutorial") {
     state.controlMode = "hider";
     state.stats.roleAtStart = "Verstopper";
     seeker.mesh.visible = false;
     state.message = "Tutorial stap 1: loop eerst rond met WASD of de pijltjes.";
+  } else if (mode === "explore") {
+    state.controlMode = "hider";
+    state.stats.roleAtStart = "Verkenner";
   } else {
     assignRandomControlRole();
   }
@@ -1539,8 +2046,19 @@ function startTutorial() {
   setupRound(mapConfigs.garden, "tutorial");
 }
 
+function exploreMap(mapKey) {
+  const config = mapConfigs[mapKey] || mapConfigs.plaza;
+  hideMenu();
+  setupRound(config, "explore");
+}
+
 function cycleControlMode() {
   if (!state.running) {
+    return;
+  }
+  if (state.mode === "explore") {
+    state.message = "In de verkenmodus bestuur je alleen de verkenner.";
+    updateHud();
     return;
   }
   if (state.mode === "tutorial" && state.tutorial.stage < 3) {
@@ -1739,7 +2257,9 @@ function nearestPuzzle(actor) {
 }
 
 function controlledActor() {
-  const actor = state.controlMode === "seeker" ? seeker : getPlayerHider();
+  const actor = state.mode === "explore"
+    ? explorer
+    : state.controlMode === "seeker" ? seeker : getPlayerHider();
   return actor && actor.mesh ? actor : null;
 }
 
@@ -1759,6 +2279,10 @@ function updatePlayer(delta) {
     }
   }
 
+  if (state.mode === "explore") {
+    return;
+  }
+
   if (state.controlMode === "hider") {
     const player = getPlayerHider();
     const puzzle = nearestPuzzle(player);
@@ -1772,6 +2296,9 @@ function updatePlayer(delta) {
 }
 
 function updateAiHiders(delta) {
+  if (state.mode === "explore") {
+    return;
+  }
   hiders.forEach((hider) => {
     if (hider.out || hider.control === "player") {
       return;
@@ -1814,7 +2341,7 @@ function updateAiHiders(delta) {
 }
 
 function updateAiSeeker(delta) {
-  if (state.controlMode === "seeker" || state.mode === "tutorial") {
+  if (state.mode === "explore" || state.controlMode === "seeker" || state.mode === "tutorial") {
     return;
   }
   updateActorJump(seeker, delta);
@@ -1849,6 +2376,9 @@ function updateAiSeeker(delta) {
 }
 
 function updateShots(delta) {
+  if (state.mode === "explore") {
+    return;
+  }
   for (let index = shots.length - 1; index >= 0; index -= 1) {
     const shot = shots[index];
     if (shot.dead) {
@@ -1899,6 +2429,9 @@ function updateShots(delta) {
 }
 
 function updateClouds(delta) {
+  if (state.mode === "explore") {
+    return;
+  }
   for (let index = clouds.length - 1; index >= 0; index -= 1) {
     const cloud = clouds[index];
     cloud.life -= delta;
@@ -1966,6 +2499,9 @@ function checkWinConditions() {
   if (!state.running) {
     return;
   }
+  if (state.mode === "explore") {
+    return;
+  }
   if (activeHiders().length === 0) {
     finishRound("Tikker wint", "Alle verstoppers zijn gepakt door de Phanto-mist.");
     return;
@@ -1976,6 +2512,9 @@ function checkWinConditions() {
 }
 
 function updatePuzzles(delta) {
+  if (state.mode === "explore") {
+    return;
+  }
   puzzles.forEach((puzzle) => {
     puzzle.pulse += delta * 2.2;
     puzzle.mesh.userData.core.rotation.y += delta * 1.1;
@@ -1988,6 +2527,9 @@ function updatePuzzles(delta) {
 }
 
 function updateSeekerVisual(delta) {
+  if (state.mode === "explore") {
+    return;
+  }
   if (!seeker.mesh) {
     return;
   }
@@ -2053,7 +2595,10 @@ function resizeRenderer() {
 }
 
 function handlePointer(event) {
-  if (!state.running || state.controlMode !== "hider") {
+  if (!state.running || (state.controlMode !== "hider" && state.mode !== "explore")) {
+    return;
+  }
+  if (state.disguiseWheelOpen) {
     return;
   }
   if (state.mode === "tutorial" && state.tutorial.stage < 1) {
@@ -2065,29 +2610,32 @@ function handlePointer(event) {
   pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
 
-  const player = getPlayerHider();
+  const player = state.mode === "explore" ? explorer : getPlayerHider();
   if (!player) {
     return;
   }
 
-  const intersections = raycaster.intersectObjects(props.map((prop) => prop.mesh), true);
+  const clickableTargets = [...props, ...worldDisguiseTargets];
+  const intersections = raycaster.intersectObjects(clickableTargets.map((target) => target.mesh), true);
   if (!intersections.length) {
     return;
   }
 
   const hit = intersections[0].object;
-  const propMesh = findPropFromObject(hit);
+  const hitPoint = intersections[0].point.clone();
+  const propMesh = findDisguiseTargetFromObject(hit);
   if (!propMesh) {
     return;
   }
-  if (player.mesh.position.distanceTo(propMesh.mesh.position) > 6.5) {
+  hitPoint.y = player.mesh.position.y;
+  if (player.mesh.position.distanceTo(hitPoint) > 6.5) {
     state.message = "Dat voorwerp is te ver weg om in te veranderen.";
     updateHud();
     return;
   }
 
-  applyDisguise(player, propMesh.kind);
-  state.message = `Je bent nu vermomd als ${propMesh.kind}.`;
+  applyDisguise(player, propMesh.kind, { targetMesh: propMesh.mesh, hitObject: hit });
+  state.message = `Je bent nu vermomd als ${displayPropName(propMesh.kind)}.`;
   if (state.mode === "tutorial") {
     state.tutorial.transformed = true;
     advanceTutorialStage(2);
@@ -2100,7 +2648,9 @@ function tick(time) {
   state.lastTime = time;
 
   if (state.running) {
-    state.timeLeft -= delta;
+    if (state.mode !== "explore") {
+      state.timeLeft -= delta;
+    }
     state.mistCooldown = Math.max(0, state.mistCooldown - delta);
     updatePlayer(delta);
     updateAiHiders(delta);
@@ -2129,8 +2679,24 @@ window.addEventListener("keydown", (event) => {
     cycleControlMode();
   }
   if (key === "shift" && state.controlMode === "seeker") {
+    if (event.repeat) {
+      return;
+    }
     event.preventDefault();
     tryThrowMist();
+    return;
+  }
+  if (key === "shift" && state.controlMode === "hider") {
+    if (event.repeat) {
+      return;
+    }
+    event.preventDefault();
+    if (state.disguiseWheelOpen) {
+      closeDisguiseColorWheel();
+    } else {
+      openDisguiseColorWheel();
+    }
+    return;
   }
   if (key === " " || key === "spacebar") {
     event.preventDefault();
@@ -2143,6 +2709,25 @@ window.addEventListener("keyup", (event) => {
 });
 
 canvas.addEventListener("pointerdown", handlePointer);
+colorWheelOverlay.addEventListener("pointerdown", (event) => {
+  if (event.target === colorWheelOverlay) {
+    closeDisguiseColorWheel();
+  }
+});
+colorWheel.addEventListener("click", (event) => {
+  const button = event.target.closest(".color-wheel-option");
+  if (!button) {
+    return;
+  }
+  const actor = activeDisguiseActor();
+  if (!actor) {
+    closeDisguiseColorWheel();
+    return;
+  }
+  setActorDisguiseColor(actor, button.dataset.colorId);
+  syncColorWheelSelection(button.dataset.colorId);
+  closeDisguiseColorWheel();
+});
 
 restartButton.addEventListener("click", () => {
   if (!state.playedRound) {
@@ -2191,6 +2776,11 @@ startMapButton.addEventListener("click", () => {
   startMap(state.selectedMap);
 });
 
+exploreMapButton.addEventListener("click", () => {
+  closeModelViewer();
+  exploreMap(state.selectedMap);
+});
+
 modelPreviewButtons.forEach((button) => {
   button.addEventListener("click", () => {
     openModelViewer(button.dataset.preview);
@@ -2207,6 +2797,7 @@ summaryMenuButton.addEventListener("click", () => {
   showMenu();
 });
 
+buildColorWheel();
 resizeRenderer();
 createWorldDecor(mapConfigs.plaza);
 setSelectedMap(state.selectedMap);

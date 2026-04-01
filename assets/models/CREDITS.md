@@ -20,6 +20,8 @@ Deze modellen zijn gebruikt om `Phanto Tikkertje` mooier te maken.
   - https://poly.pizza/m/DgOCW9ZCRJ
 - `adventurer.glb`: Adventurer by Quaternius via Poly Pizza, CC0
   - https://poly.pizza/m/ZwF0K7WBmu
+- `hamster.glb`: Hamster by Poly by Google via Poly Pizza, CC-BY 3.0
+  - https://poly.pizza/m/3YtzEQ5TVUP
 - `villa-house.glb`: Modern House by KJ via Get3DModels, CC Attribution
   - https://www.get3dmodels.com/architecture/modern-house-model/
 - `forest-nature.glb`: Nature by 3Donimus via Poly Pizza
@@ -32,3 +34,36 @@ Deze modellen zijn gebruikt om `Phanto Tikkertje` mooier te maken.
   - https://poly.pizza/m/64iwya-59ew
 - `fall-tree.glb`: Fall Tree by Danni Bittman via Poly Pizza
   - https://poly.pizza/m/4GYen9Xm3Kj
+- `fantasy-sawmill.glb`: Fantasy Sawmill by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/alxTTFjKDM
+
+## Mistbos Poly Pizza Set
+
+- `poly-forest/tree-stump.glb`: Tree stump by Poly by Google via Poly Pizza, CC-BY 3.0
+  - https://poly.pizza/m/cnDk3EzC3Gs
+- `poly-forest/bush-a.glb`: Bush by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/ooG6CkLyE8
+- `poly-forest/pine-a.glb`: Pine by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/699sFuLCN2
+- `poly-forest/tall-grass.glb`: Tall Grass by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/JSIYtscPmP
+- `poly-forest/twisted-tree-a.glb`: Twisted Tree by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/8oraKn9m0x
+- `poly-forest/pine-b.glb`: Pine by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/rfnxJv0Rqa
+- `poly-forest/birch-trees.glb`: Birch Trees by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/R7qMWzb7nk
+- `poly-forest/trees-cluster.glb`: Trees by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/etFGNvsiFv
+- `poly-forest/fern.glb`: Fern by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/jqcanvH7D6
+- `poly-forest/mossy-log.glb`: Wood Log with Moss by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/nwsYvcI0bC
+- `poly-forest/bush-b.glb`: Bush by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/EoTERLq3z2
+- `poly-forest/resource-gold.glb`: Resource Gold by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/jkqD4dMoz1
+- `poly-forest/twisted-tree-b.glb`: Twisted Tree by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/7PDBpElkQr
+- `poly-forest/pine-c.glb`: Pine by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/igSu0cPoBz
