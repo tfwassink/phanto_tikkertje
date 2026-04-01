@@ -81,7 +81,7 @@ const COLORABLE_DISGUISE_KINDS = new Set([
   "birchTrees", "treesCluster", "fern", "mossyLog", "bushB", "resourceGold",
   "twistedTreeB", "pineC",
 ]);
-const NON_DISGUISE_KINDS = new Set(["fantasySawmill"]);
+const NON_DISGUISE_KINDS = new Set(["fantasySawmill", "bonfire"]);
 const DISGUISE_COLOR_PRESETS = [
   { id: "sunset", label: "Zon", color: "#f09b41", accent: "#ffd272", materialNames: ["leaves", "leaf", "bush", "grass"] },
   { id: "mint", label: "Munt", color: "#4fbf84", accent: "#9df0c4", materialNames: ["leaves", "leaf", "bush", "grass"] },
@@ -191,6 +191,8 @@ const modelAssets = {
   twistedTreeB: { path: "assets/models/poly-forest/twisted-tree-b.glb", desiredHeight: 19.5, rotationY: 0, scene: null, size: null, center: null },
   pineC: { path: "assets/models/poly-forest/pine-c.glb", desiredHeight: 23, rotationY: 0, scene: null, size: null, center: null },
   fantasySawmill: { path: "assets/models/fantasy-sawmill.glb", desiredHeight: 12.5, rotationY: 0, scene: null, size: null, center: null },
+  tentO: { path: "assets/models/tent-o.glb", desiredHeight: 6.6, rotationY: 0, scene: null, size: null, center: null },
+  bonfire: { path: "assets/models/bonfire.glb", desiredHeight: 2.8, rotationY: 0, scene: null, size: null, center: null },
   crate: { path: "assets/models/crate.glb", desiredHeight: 3.6, rotationY: 0, scene: null, size: null, center: null },
   barrel: { path: "assets/models/barrel.glb", desiredHeight: 4.4, rotationY: 0, scene: null, size: null, center: null },
   bush: { path: "assets/models/bush.glb", desiredHeight: 3.1, rotationY: 0, scene: null, size: null, center: null },
@@ -245,6 +247,10 @@ const MISTBOS_WORLD_PLACEMENTS = [
 
 const MISTBOS_STRUCTURE_PLACEMENTS = [
   ["fantasySawmill", -2, -1.2, -36, 1.16, Math.PI * 0.08],
+  ["bonfire", 27, -0.2, 33, 1.12, 0],
+  ["tentO", 27, -0.2, 24, 1.18, Math.PI, "sunset"],
+  ["tentO", 34.8, -0.2, 37.5, 1.18, -Math.PI * 0.66, "ocean"],
+  ["tentO", 19.2, -0.2, 37.5, 1.18, Math.PI * 0.66, "mint"],
 ];
 
 const MISTBOS_PREVIEW_PLACEMENTS = [
@@ -1843,10 +1849,13 @@ function createWorldDecor(config) {
       });
     });
 
-    MISTBOS_STRUCTURE_PLACEMENTS.forEach(([kind, x, y, z, scale, rotationY]) => {
+    MISTBOS_STRUCTURE_PLACEMENTS.forEach(([kind, x, y, z, scale, rotationY, colorId]) => {
       const asset = createAssetInstance(kind);
       if (!asset) {
         return;
+      }
+      if (colorId && canCustomizeDisguise(kind)) {
+        tintPropMesh(asset, kind, colorId);
       }
       asset.position.set(x, y, z);
       asset.scale.multiplyScalar(scale);

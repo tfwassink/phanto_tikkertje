@@ -36,6 +36,10 @@ Deze modellen zijn gebruikt om `Phanto Tikkertje` mooier te maken.
   - https://poly.pizza/m/4GYen9Xm3Kj
 - `fantasy-sawmill.glb`: Fantasy Sawmill by Quaternius via Poly Pizza, CC0
   - https://poly.pizza/m/alxTTFjKDM
+- `tent-o.glb`: Tent by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/5Q7qIrfDxA
+- `bonfire.glb`: Bonfire by Quaternius via Poly Pizza, CC0
+  - https://poly.pizza/m/Azj9hJwwwG
 
 ## Mistbos Poly Pizza Set
 
