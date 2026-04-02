@@ -1909,6 +1909,14 @@ function createWorldDecor(config) {
       asset.rotation.y = rotationY || 0;
       worldRoot.add(asset);
       registerCulledSceneObject(asset, WORLD_DECOR_CULL_DISTANCE + 8);
+      if (!NON_DISGUISE_KINDS.has(kind)) {
+        worldDisguiseTargets.push({
+          id: `world-structure-${kind}-${x}-${z}`,
+          kind,
+          mesh: asset,
+          radius: 3.8 * Math.max(0.9, scale),
+        });
+      }
     });
   }
 }
