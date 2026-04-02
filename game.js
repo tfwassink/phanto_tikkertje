@@ -1020,6 +1020,25 @@ function createPartialDisguiseMesh(kind, options = {}) {
   return { mesh: wrapper, partPath };
 }
 
+function createFullDisguiseMeshFromTarget(kind, targetMesh) {
+  if (!targetMesh) {
+    return null;
+  }
+
+  const clone = cloneSkinned(targetMesh);
+  prepareImportedModel(clone);
+
+  const bounds = getRenderableBounds(clone);
+  const center = bounds.getCenter(new THREE.Vector3());
+
+  clone.position.sub(new THREE.Vector3(center.x, bounds.min.y, center.z));
+
+  const wrapper = new THREE.Group();
+  wrapper.add(clone);
+  wrapper.userData.kind = kind;
+  return wrapper;
+}
+
 function createCharacter(color, isSeeker = false) {
   const group = new THREE.Group();
   group.castShadow = true;
@@ -1763,7 +1782,8 @@ function clearDisguise(hider) {
 function applyDisguise(hider, kind, options = {}) {
   clearDisguise(hider);
   const partialDisguise = createPartialDisguiseMesh(kind, options);
-  const disguise = partialDisguise?.mesh || createPropMesh(kind);
+  const fullDisguise = !partialDisguise?.mesh ? createFullDisguiseMeshFromTarget(kind, options.targetMesh) : null;
+  const disguise = partialDisguise?.mesh || fullDisguise || createPropMesh(kind);
   const colorId = options.colorId || hider.disguiseColorId || DISGUISE_COLOR_PRESETS[0].id;
   disguise.position.set(0, 0, 0);
   if (canCustomizeDisguise(kind)) {
