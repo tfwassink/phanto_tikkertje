@@ -2691,7 +2691,10 @@ function handlePointer(event) {
     return;
   }
   hitPoint.y = player.mesh.position.y;
-  if (player.mesh.position.distanceTo(hitPoint) > 6.5) {
+  const hitDistance = player.mesh.position.distanceTo(hitPoint);
+  const targetDistance = player.mesh.position.distanceTo(propMesh.mesh.position);
+  const allowedDistance = Math.max(6.5, (propMesh.radius || 0) + 3.2);
+  if (Math.min(hitDistance, targetDistance) > allowedDistance) {
     state.message = "Dat voorwerp is te ver weg om in te veranderen.";
     updateHud();
     return;
