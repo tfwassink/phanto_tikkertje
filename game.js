@@ -74,6 +74,8 @@ const DISGUISE_STILL_SPEED = 0.02;
 const JUMP_SPEED = 10.5;
 const GRAVITY = 28;
 const COLOR_WHEEL_RADIUS = 122;
+const WORLD_PROP_CULL_DISTANCE = 54;
+const WORLD_DECOR_CULL_DISTANCE = 76;
 const NON_DISGUISE_KINDS = new Set(["fantasySawmill", "bonfire"]);
 const DISGUISE_COLOR_PRESETS = [
   { id: "sunset", label: "Zon", color: "#f09b41", accent: "#ffd272", materialNames: ["leaves", "leaf", "bush", "grass"] },
@@ -160,6 +162,7 @@ const mountainMeshes = [];
 const decorativeClouds = [];
 const villaDoors = [];
 const worldDisguiseTargets = [];
+const culledSceneEntries = [];
 
 const modelAssets = {
   seeker: { path: "assets/models/character-animated.glb", desiredHeight: 5.7, rotationY: 0, scene: null, size: null, center: null },
@@ -331,6 +334,48 @@ const mapConfigs = {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function registerCulledSceneObject(mesh, maxDistance, position = mesh?.position) {
+  if (!mesh || !position) {
+    return;
+  }
+
+  culledSceneEntries.push({
+    mesh,
+    position,
+    maxDistanceSq: maxDistance * maxDistance,
+  });
+}
+
+function updateSceneCulling() {
+  if (state.viewer.active) {
+    return;
+  }
+
+  const actor = controlledActor();
+  const focus = actor?.mesh?.position || null;
+  if (!focus) {
+    culledSceneEntries.forEach((entry) => {
+      entry.mesh.visible = true;
+    });
+    return;
+  }
+
+  culledSceneEntries.forEach((entry) => {
+    entry.mesh.visible = focus.distanceToSquared(entry.position) <= entry.maxDistanceSq;
+  });
+}
+
+function syncSceneModeVisibility() {
+  const viewerActive = state.viewer.active;
+  const gameplayActive = !viewerActive;
+
+  viewerRoot.visible = viewerActive;
+  viewerLightRig.visible = viewerActive;
+  worldRoot.visible = gameplayActive;
+  gameplayRoot.visible = gameplayActive;
+  mapPreviewRoot.visible = false;
 }
 
 function rand(min, max) {
@@ -718,6 +763,7 @@ function openModelViewer(defaultKey = "seeker") {
   modelViewerPanel.classList.add("visible");
   menuHint.textContent = "Klik op een mapkaart om een map te bekijken, of bekijk hieronder losse modellen.";
   showViewerModel(defaultKey);
+  syncSceneModeVisibility();
 }
 
 function closeModelViewer() {
@@ -729,6 +775,7 @@ function closeModelViewer() {
   viewerLightRig.clear();
   clearViewerModel();
   menuHint.textContent = "Klik op een mapkaart om hem rustig te bekijken. Start daarna de geselecteerde map of begin de tutorial.";
+  syncSceneModeVisibility();
 }
 
 function showMenu() {
@@ -738,6 +785,7 @@ function showMenu() {
 
 function hideMenu() {
   menuOverlay.classList.remove("visible");
+  syncSceneModeVisibility();
 }
 
 function showSummary() {
@@ -837,6 +885,7 @@ function clearGameplay() {
   hiders.length = 0;
   shots.length = 0;
   clouds.length = 0;
+  culledSceneEntries.length = 0;
   explorer.mesh = null;
 }
 
@@ -1738,6 +1787,7 @@ function createWorldDecor(config) {
   decorativeClouds.length = 0;
   villaDoors.length = 0;
   worldDisguiseTargets.length = 0;
+  culledSceneEntries.length = 0;
 
   const ambient = new THREE.HemisphereLight(
     config.ambientSky || "#fff5d9",
@@ -1784,6 +1834,7 @@ function createWorldDecor(config) {
     mountain.position.set(Math.cos(angle) * distance, 8, Math.sin(angle) * distance);
     mountain.castShadow = true;
     worldRoot.add(mountain);
+    registerCulledSceneObject(mountain, WORLD_DECOR_CULL_DISTANCE + 18);
     mountainMeshes.push(mountain);
   }
 
@@ -1836,6 +1887,7 @@ function createWorldDecor(config) {
       asset.position.set(x, 0, z);
       asset.scale.multiplyScalar(scale);
       worldRoot.add(asset);
+      registerCulledSceneObject(asset, WORLD_DECOR_CULL_DISTANCE);
       worldDisguiseTargets.push({
         id: `world-${kind}-${x}-${z}`,
         kind,
@@ -1856,6 +1908,7 @@ function createWorldDecor(config) {
       asset.scale.multiplyScalar(scale);
       asset.rotation.y = rotationY || 0;
       worldRoot.add(asset);
+      registerCulledSceneObject(asset, WORLD_DECOR_CULL_DISTANCE + 8);
     });
   }
 }
@@ -1938,6 +1991,7 @@ function showMapPreview(mapKey) {
   const config = mapConfigs[mapKey] || mapConfigs.plaza;
   menuHint.textContent = `${config.name} geselecteerd. Bekijk de map rustig en klik daarna op Start Geselecteerde Map.`;
   setSelectedMap(mapKey);
+  syncSceneModeVisibility();
 }
 
 function setupRound(config, mode) {
@@ -2015,6 +2069,7 @@ function setupRound(config, mode) {
     }
     mesh.userData.propId = `prop-${index}`;
     gameplayRoot.add(mesh);
+    registerCulledSceneObject(mesh, WORLD_PROP_CULL_DISTANCE);
     props.push({ id: `prop-${index}`, kind, mesh, radius: propTypes[kind].radius });
   });
 
@@ -2553,11 +2608,7 @@ function updateCamera(delta) {
       previewModel.rotation.y += delta * 0.75;
     }
     scene.background = new THREE.Color("#f6e7c7");
-    worldRoot.visible = false;
-    gameplayRoot.visible = false;
-    mapPreviewRoot.visible = false;
-    viewerRoot.visible = true;
-    viewerLightRig.visible = true;
+    syncSceneModeVisibility();
     const desired = state.viewer.mode === "map"
       ? new THREE.Vector3(0, 17, 27)
       : new THREE.Vector3(0, 9.5, 16);
@@ -2566,11 +2617,7 @@ function updateCamera(delta) {
     return;
   }
 
-  viewerLightRig.visible = false;
-  worldRoot.visible = true;
-  gameplayRoot.visible = true;
-  viewerRoot.visible = false;
-  mapPreviewRoot.visible = false;
+  syncSceneModeVisibility();
   const actor = controlledActor();
   const target = actor ? actor.mesh.position : new THREE.Vector3(0, 0, 0);
   const desired = new THREE.Vector3(target.x + 22, 34, target.z + 30);
@@ -2655,7 +2702,7 @@ function tick(time) {
   const delta = Math.min(0.05, clock.getDelta());
   state.lastTime = time;
 
-  if (state.running) {
+  if (state.running && !state.viewer.active) {
     if (state.mode !== "explore") {
       state.timeLeft -= delta;
     }
@@ -2670,7 +2717,10 @@ function tick(time) {
     checkWinConditions();
   }
 
-  updateDecor(delta);
+  if (!state.viewer.active) {
+    updateDecor(delta);
+    updateSceneCulling();
+  }
   updateCamera(delta);
   updateHud();
   renderer.render(scene, camera);
