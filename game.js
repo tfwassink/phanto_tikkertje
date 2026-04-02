@@ -76,7 +76,7 @@ const GRAVITY = 28;
 const COLOR_WHEEL_RADIUS = 122;
 const WORLD_PROP_CULL_DISTANCE = 54;
 const WORLD_DECOR_CULL_DISTANCE = 76;
-const NON_DISGUISE_KINDS = new Set(["fantasySawmill", "bonfire"]);
+const NON_DISGUISE_KINDS = new Set(["fantasySawmill"]);
 const DISGUISE_COLOR_PRESETS = [
   { id: "sunset", label: "Zon", color: "#f09b41", accent: "#ffd272", materialNames: ["leaves", "leaf", "bush", "grass"] },
   { id: "mint", label: "Munt", color: "#4fbf84", accent: "#9df0c4", materialNames: ["leaves", "leaf", "bush", "grass"] },
