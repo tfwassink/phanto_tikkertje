@@ -227,18 +227,18 @@ const propTypes = {
 
 const MISTBOS_PROP_LAYOUT = [
   [-56, 0, -35, "treeStump"], [-29, 0, -31, "bushA"], [-15, 0, -37, "tallGrass"],
-  [14, 0, -40, "pineB"], [21, 0, -30, "fern"], [40, 0, -37, "birchTrees"], [55, 0, -32, "bushB"],
-  [-52, 0, -17, "mossyLog"], [-37, 0, -9, "treesCluster"], [-23, 0, -18, "tallGrass"], [-6, 0, -12, "pineC"],
+  [14, 0, -40, "pineB"], [21, 0, -30, "fern"], [40, 0, -37, "pineA"], [55, 0, -32, "bushB"],
+  [-52, 0, -17, "mossyLog"], [-37, 0, -9, "pineB"], [-23, 0, -18, "tallGrass"], [-6, 0, -12, "pineC"],
   [11, 0, -16, "resourceGold"], [27, 0, -9, "twistedTreeB"], [35, 0, -18, "bushA"], [50, 0, -11, "treeStump"],
-  [-57, 0, 5, "pineB"], [-42, 0, 11, "fern"], [-21, 0, 3, "birchTrees"], [-6, 0, 12, "bushB"],
+  [-57, 0, 5, "pineB"], [-42, 0, 11, "fern"], [-21, 0, 3, "pineA"], [-6, 0, 12, "bushB"],
   [10, 0, 4, "tallGrass"], [23, 0, 13, "pineA"], [33, 0, 1, "mossyLog"], [55, 0, 9, "bushA"],
   [-48, 0, 24, "twistedTreeA"], [-31, 0, 35, "pineC"], [-12, 0, 22, "treeStump"],
   [47, 0, 27, "bushB"],
 ];
 
 const MISTBOS_WORLD_PLACEMENTS = [
-  ["pineB", -60, -24, 1.26], ["pineA", -47, 29, 1.22], ["pineC", 57, -18, 1.28], ["treesCluster", 51, 23, 1.2],
-  ["twistedTreeA", -31, 20, 1.18], ["twistedTreeB", 29, 20, 1.12], ["birchTrees", -4, -42, 1.24], ["birchTrees", 11, 40, 1.16],
+  ["pineB", -60, -24, 1.26], ["pineA", -47, 29, 1.22], ["pineC", 57, -18, 1.28], ["pineB", 51, 23, 1.2],
+  ["twistedTreeA", -31, 20, 1.18], ["twistedTreeB", 29, 20, 1.12], ["pineA", -4, -42, 1.24], ["pineC", 11, 40, 1.16],
   ["mossyLog", -10, 33, 1.14], ["treeStump", 19, -30, 1.18], ["bushA", -24, -28, 1.08], ["bushB", 36, -27, 1.06],
   ["fern", -38, 4, 1.26], ["fern", 42, 8, 1.22], ["tallGrass", -7, 23, 1.32], ["tallGrass", 7, -24, 1.32],
 ];
