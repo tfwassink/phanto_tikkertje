@@ -1345,7 +1345,11 @@ function setActorDisguiseColor(actor, colorId) {
 
   const nextColorId = getDisguiseColorPreset(colorId).id;
   actor.disguiseColorId = nextColorId;
-  applyDisguise(actor, actor.disguisedAs, { partPath: actor.disguisePartPath, colorId: nextColorId });
+  applyDisguise(actor, actor.disguisedAs, {
+    partPath: actor.disguisePartPath,
+    colorId: nextColorId,
+    disguiseScale: actor.disguiseScale,
+  });
   state.message = `Vermomming aangepast naar ${getDisguiseColorPreset(nextColorId).label.toLowerCase()}.`;
   updateHud();
 }
@@ -1737,6 +1741,7 @@ function createHider(index, position, color, control) {
     disguisedAs: null,
     disguisePartPath: null,
     disguiseMesh: null,
+    disguiseScale: null,
     disguiseColorId: DISGUISE_COLOR_PRESETS[index % DISGUISE_COLOR_PRESETS.length].id,
     facing: new THREE.Vector3(1, 0, 0),
     moveTarget: position.clone(),
@@ -1770,6 +1775,7 @@ function clearDisguise(hider) {
   }
   hider.disguisedAs = null;
   hider.disguisePartPath = null;
+  hider.disguiseScale = null;
   if (state.disguiseWheelOpen) {
     const activeActor = state.mode === "explore" ? explorer : getPlayerHider();
     if (activeActor === hider) {
@@ -1785,7 +1791,11 @@ function applyDisguise(hider, kind, options = {}) {
   const fullDisguise = !partialDisguise?.mesh ? createFullDisguiseMeshFromTarget(kind, options.targetMesh) : null;
   const disguise = partialDisguise?.mesh || fullDisguise || createPropMesh(kind);
   const colorId = options.colorId || hider.disguiseColorId || DISGUISE_COLOR_PRESETS[0].id;
+  const sourceScale = options.targetMesh?.scale?.clone() || options.disguiseScale?.clone() || hider.disguiseScale?.clone() || null;
   disguise.position.set(0, 0, 0);
+  if (sourceScale && !partialDisguise?.mesh) {
+    disguise.scale.copy(sourceScale);
+  }
   if (canCustomizeDisguise(kind)) {
     tintPropMesh(disguise, kind, colorId);
   }
@@ -1793,6 +1803,7 @@ function applyDisguise(hider, kind, options = {}) {
   hider.disguiseMesh = disguise;
   hider.disguisedAs = kind;
   hider.disguisePartPath = partialDisguise?.partPath || null;
+  hider.disguiseScale = sourceScale;
   hider.disguiseColorId = colorId;
   setCharacterVisible(hider, false);
 }
