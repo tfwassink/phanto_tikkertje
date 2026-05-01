@@ -1,0 +1,25 @@
+Katana / Scythe printset
+
+Bestanden:
+- katana-sword-socket-220mm.stl
+- scifi-scythe-head-socket.stl
+- scythe-katana-connector-rod.stl
+
+Opmerking over kleur:
+- STL bewaart geen materiaal- of kleurinformatie.
+- Als je de scythe grijs wilt, print hem in grijs filament of verf hem na het printen grijs.
+
+Bedoeling van de onderdelen:
+- katana-sword-socket-220mm.stl:
+  Katana met een intern gat vanaf het handvat richting de punt.
+  De punt blijft dicht.
+
+- scifi-scythe-head-socket.stl:
+  Scythe-kop met aansluiting voor de connectorstok.
+
+- scythe-katana-connector-rod.stl:
+  Losse stok/verbinder die door de katana kan en in de scythe-aansluiting past.
+
+Praktische tip:
+- Test eerst met een klein stukje proefprint of de passing van de stok goed is voor jouw printer.
+- Mogelijk moet je in de slicer 1-3% schalen voor een strakkere of lossere passing.
